@@ -1,0 +1,439 @@
+<script lang="ts">
+	import { gameStore } from '../gameStore.js';
+	import Reel from './Reel.svelte';
+	import { GAME_CONFIG, SYMBOLS } from '../config.js';
+	import type { ReelState } from '../types.js';
+
+	let reels: ReelState[] = [];
+	let gameState: any = {};
+
+	gameStore.subscribe(state => {
+		gameState = state;
+	});
+
+	gameStore.reels.subscribe(state => {
+		reels = state;
+	});
+
+	function handleSpin() {
+		gameStore.spin();
+	}
+
+	function handleBetChange(event: Event) {
+		const target = event.target as HTMLInputElement;
+		const newBet = parseInt(target.value) || 1;
+		gameStore.setBet(newBet);
+	}
+
+	function handleReset() {
+		gameStore.reset();
+	}
+
+	function increaseBet() {
+		gameStore.setBet(gameState.bet + 1);
+	}
+
+	function decreaseBet() {
+		gameStore.setBet(gameState.bet - 1);
+	}
+</script>
+
+<div class="slot-machine">
+	<header class="game-header">
+		<h1 class="game-title">SpinCycle</h1>
+		<div class="game-stats">
+			<div class="stat">
+				<span class="label">Balance</span>
+				<span class="value">${gameState.balance}</span>
+			</div>
+			<div class="stat">
+				<span class="label">Last Win</span>
+				<span class="value win-amount">${gameState.lastWin}</span>
+			</div>
+			<div class="stat">
+				<span class="label">Spins</span>
+				<span class="value">{gameState.spinCount}</span>
+			</div>
+		</div>
+	</header>
+
+	<div class="reels-container">
+		{#each reels as reel, index}
+			<Reel 
+				symbols={reel.symbols}
+				isSpinning={reel.isSpinning}
+				position={reel.position}
+				reelIndex={index}
+			/>
+		{/each}
+	</div>
+
+	<div class="controls">
+		<div class="bet-controls">
+			<label for="bet-amount">Bet</label>
+			<div class="bet-input-group">
+				<button 
+					class="bet-btn" 
+					on:click={decreaseBet}
+					disabled={gameState.bet <= GAME_CONFIG.minBet || gameState.isSpinning}
+				>
+					−
+				</button>
+				<input
+					id="bet-amount"
+					type="number"
+					min={GAME_CONFIG.minBet}
+					max={GAME_CONFIG.maxBet}
+					value={gameState.bet}
+					on:input={handleBetChange}
+					disabled={gameState.isSpinning}
+					class="bet-input"
+				/>
+				<button 
+					class="bet-btn" 
+					on:click={increaseBet}
+					disabled={gameState.bet >= GAME_CONFIG.maxBet || gameState.isSpinning}
+				>
+					+
+				</button>
+			</div>
+		</div>
+
+		<div class="action-buttons">
+			<button
+				class="spin-btn"
+				on:click={handleSpin}
+				disabled={gameState.isSpinning || gameState.balance < gameState.bet}
+			>
+				{gameState.isSpinning ? 'Spinning...' : 'SPIN'}
+			</button>
+			<button class="reset-btn" on:click={handleReset}>
+				Reset
+			</button>
+		</div>
+	</div>
+
+	{#if gameState.winAmount > 0}
+		<div class="win-notification">
+			WIN! ${gameState.winAmount}
+		</div>
+	{/if}
+
+	<div class="paytable">
+		<h3>Paytable</h3>
+		<div class="symbols-grid">
+			{#each SYMBOLS as symbol}
+				<div class="symbol-item">
+					<span class="symbol-emoji">{symbol.emoji}</span>
+					<span class="symbol-value">${symbol.value}</span>
+				</div>
+			{/each}
+		</div>
+	</div>
+</div>
+
+<style>
+	.slot-machine {
+		max-width: 600px;
+		margin: 0 auto;
+		padding: 20px;
+		background: #fff;
+		border: 2px solid #000;
+		border-radius: 12px;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	}
+
+	.game-header {
+		text-align: center;
+		margin-bottom: 20px;
+	}
+
+	.game-title {
+		font-size: 1.8rem;
+		font-weight: bold;
+		color: #000;
+		margin: 0 0 15px 0;
+		letter-spacing: 1px;
+	}
+
+	.game-stats {
+		display: flex;
+		justify-content: space-around;
+		gap: 15px;
+		flex-wrap: wrap;
+	}
+
+	.stat {
+		background: #f8f8f8;
+		padding: 8px 12px;
+		border-radius: 6px;
+		border: 1px solid #ddd;
+		min-width: 80px;
+	}
+
+	.label {
+		color: #666;
+		font-size: 0.75rem;
+		display: block;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.value {
+		color: #000;
+		font-size: 1rem;
+		font-weight: bold;
+		display: block;
+	}
+
+	.win-amount {
+		color: #000;
+	}
+
+	.reels-container {
+		display: flex;
+		justify-content: center;
+		gap: 8px;
+		margin: 20px 0;
+		padding: 15px;
+		background: #f8f8f8;
+		border-radius: 8px;
+		border: 1px solid #ddd;
+	}
+
+	.controls {
+		display: flex;
+		flex-direction: column;
+		gap: 15px;
+		align-items: center;
+		margin: 20px 0;
+	}
+
+	.bet-controls {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.bet-controls label {
+		color: #000;
+		font-weight: 500;
+		font-size: 0.9rem;
+	}
+
+	.bet-input-group {
+		display: flex;
+		align-items: center;
+		gap: 2px;
+	}
+
+	.bet-btn {
+		width: 32px;
+		height: 32px;
+		border: 1px solid #000;
+		background: #fff;
+		color: #000;
+		font-size: 1.2rem;
+		font-weight: bold;
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.2s;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.bet-btn:hover:not(:disabled) {
+		background: #000;
+		color: #fff;
+	}
+
+	.bet-btn:disabled {
+		background: #f0f0f0;
+		color: #ccc;
+		border-color: #ccc;
+		cursor: not-allowed;
+	}
+
+	.bet-input {
+		width: 60px;
+		height: 32px;
+		text-align: center;
+		border: 1px solid #000;
+		border-radius: 4px;
+		background: #fff;
+		font-size: 0.9rem;
+		font-weight: 500;
+	}
+
+	.action-buttons {
+		display: flex;
+		gap: 10px;
+	}
+
+	.spin-btn {
+		padding: 10px 20px;
+		font-size: 1rem;
+		font-weight: bold;
+		background: #000;
+		color: #fff;
+		border: 1px solid #000;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: all 0.2s;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.spin-btn:hover:not(:disabled) {
+		background: #fff;
+		color: #000;
+	}
+
+	.spin-btn:disabled {
+		background: #ccc;
+		color: #666;
+		border-color: #ccc;
+		cursor: not-allowed;
+	}
+
+	.reset-btn {
+		padding: 10px 15px;
+		font-size: 0.9rem;
+		font-weight: 500;
+		background: #fff;
+		color: #000;
+		border: 1px solid #000;
+		border-radius: 6px;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.reset-btn:hover {
+		background: #000;
+		color: #fff;
+	}
+
+	.win-notification {
+		text-align: center;
+		font-size: 1.2rem;
+		font-weight: bold;
+		color: #000;
+		background: #f8f8f8;
+		padding: 10px;
+		border-radius: 6px;
+		margin: 15px 0;
+		border: 1px solid #000;
+		animation: pulse 1s infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% { transform: scale(1); }
+		50% { transform: scale(1.02); }
+	}
+
+	.paytable {
+		margin-top: 20px;
+		padding: 15px;
+		background: #f8f8f8;
+		border-radius: 8px;
+		border: 1px solid #ddd;
+	}
+
+	.paytable h3 {
+		color: #000;
+		text-align: center;
+		margin: 0 0 10px 0;
+		font-size: 1rem;
+		font-weight: bold;
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+	}
+
+	.symbols-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+		gap: 8px;
+	}
+
+	.symbol-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 8px;
+		background: #fff;
+		border-radius: 4px;
+		border: 1px solid #ddd;
+		text-align: center;
+	}
+
+	.symbol-emoji {
+		font-size: 1.5rem;
+		margin-bottom: 4px;
+	}
+
+	.symbol-value {
+		color: #000;
+		font-weight: bold;
+		font-size: 0.8rem;
+	}
+
+	@media (max-width: 768px) {
+		.slot-machine {
+			padding: 15px;
+			margin: 10px;
+		}
+
+		.game-title {
+			font-size: 1.5rem;
+		}
+
+		.game-stats {
+			flex-direction: column;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.stat {
+			min-width: 120px;
+		}
+
+		.reels-container {
+			flex-direction: column;
+			align-items: center;
+			gap: 4px;
+		}
+
+		.bet-controls {
+			flex-direction: column;
+			gap: 8px;
+		}
+
+		.action-buttons {
+			flex-direction: column;
+			width: 100%;
+		}
+
+		.spin-btn, .reset-btn {
+			width: 100%;
+		}
+
+		.symbols-grid {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	@media (max-width: 480px) {
+		.slot-machine {
+			padding: 10px;
+		}
+
+		.game-title {
+			font-size: 1.3rem;
+		}
+
+		.symbols-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+</style> 

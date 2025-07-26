@@ -136,6 +136,10 @@
 				<span class="value win-amount">${gameState.lastWin}</span>
 			</div>
 			<div class="stat">
+				<span class="label">Total Won</span>
+				<span class="value total-winnings">${gameState.totalWinnings}</span>
+			</div>
+			<div class="stat">
 				<span class="label">Spins</span>
 				<span class="value">{gameLoopState.spinCount}</span>
 			</div>
@@ -311,6 +315,11 @@
 
 	.win-amount {
 		color: #000;
+	}
+
+	.total-winnings {
+		color: #22c55e;
+		font-weight: bold;
 	}
 
 	.reels-container {

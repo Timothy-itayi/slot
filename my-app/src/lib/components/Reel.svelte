@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
 	import { gsap } from 'gsap';
 	import type { Symbol } from '../types.js';
 	import { GAME_CONFIG, SYMBOLS } from '../config.js';
@@ -8,17 +8,30 @@
 	export let isSpinning = false;
 	export let reelIndex = 0;
 
+	const dispatch = createEventDispatcher();
+
 	// Simple array-based reel system
 	let container: HTMLElement;
 	let reelFrame: HTMLElement;
 	let animation: gsap.core.Tween;
 	
-	// Create the reel array - duplicate symbols for infinite scroll
-	$: reelArray = symbols.length > 0 ? [...symbols, ...symbols, ...symbols] : [];
+	// Create a large pre-allocated array for infinite scroll
+	// This prevents DOM re-renders during extension
+	let reelArray: Symbol[] = [];
+	let originalSymbolCount = symbols.length;
 	
 	// Track current position for debugging
 	let currentPosition = 0;
 	let spinCount = 0;
+	
+	// Initialize with a large array (100 sets of symbols)
+	$: if (symbols.length > 0 && reelArray.length === 0) {
+		reelArray = Array(100).fill(symbols).flat();
+		console.log(`🎰 REEL ${reelIndex + 1}: Initialized with ${reelArray.length} symbols`);
+	}
+
+	// No need for array extension with pre-allocated large array
+	// The array is large enough for many spins without running out
 
 	// Simple animation function
 	function animateReel() {
@@ -60,6 +73,29 @@
 		console.log(`🎰 REEL ${reelIndex + 1}: Animation stopped`);
 	}
 
+	// Dispatch array data for debugger
+	$: if (reelArray.length > 0) {
+		dispatch('arrayUpdate', {
+			reelIndex,
+			array: reelArray,
+			length: reelArray.length,
+			originalLength: originalSymbolCount
+		});
+	}
+
+	// Dispatch debug info for debugger
+	$: {
+		dispatch('debugUpdate', {
+			reelIndex,
+			isSpinning,
+			spinCount,
+			totalSymbols: reelArray.length,
+			originalSymbolCount,
+			preAllocatedSets: Math.floor(reelArray.length / originalSymbolCount),
+			currentPosition
+		});
+	}
+
 	onDestroy(() => {
 		if (animation) {
 			animation.kill();
@@ -81,17 +117,6 @@
 				{symbol.emoji}
 			</div>
 		{/each}
-	</div>
-</div>
-
-<!-- Simple Debug Panel -->
-<div class="debug-panel">
-	<h4>Reel {reelIndex + 1}</h4>
-	<div class="debug-info">
-		<p><strong>Spinning:</strong> {isSpinning ? '🟢 YES' : '🔴 NO'}</p>
-		<p><strong>Spin Count:</strong> {spinCount}</p>
-		<p><strong>Symbols:</strong> {reelArray.length}</p>
-		<p><strong>Position:</strong> {currentPosition}px</p>
 	</div>
 </div>
 
@@ -171,32 +196,6 @@
 		}
 	}
 
-	/* Debug Panel */
-	.debug-panel {
-		position: absolute;
-		top: 10px;
-		right: 10px;
-		background: rgba(0, 0, 0, 0.8);
-		color: white;
-		padding: 10px;
-		border-radius: 5px;
-		font-size: 12px;
-		font-family: monospace;
-		z-index: 1000;
-		min-width: 150px;
-	}
-
-	.debug-panel h4 {
-		margin: 0 0 8px 0;
-		font-size: 14px;
-		color: #ffd700;
-	}
-
-	.debug-info p {
-		margin: 2px 0;
-		line-height: 1.2;
-	}
-
 	@media (max-width: 768px) {
 		.reel-container {
 			width: 60px;
@@ -206,11 +205,6 @@
 		.symbol {
 			height: 60px;
 			font-size: 1.5rem;
-		}
-
-		.debug-panel {
-			font-size: 10px;
-			min-width: 120px;
 		}
 	}
 

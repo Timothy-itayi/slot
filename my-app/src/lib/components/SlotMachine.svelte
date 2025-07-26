@@ -2,12 +2,19 @@
 	import { gameStore } from '../gameStore.js';
 	import { gameLoop } from '../gameLoop.js';
 	import Reel from './Reel.svelte';
+	import Debugger from './Debugger.svelte';
 	import { GAME_CONFIG, SYMBOLS } from '../config.js';
-	import type { ReelState } from '../types.js';
+	import type { ReelState, Symbol } from '../types.js';
 
 	let reels: ReelState[] = [];
 	let gameState: any = {};
 	let gameLoopState: any = {};
+	
+	// Debugger state
+	let debuggerVisible = false;
+	let reelArrays: Symbol[][] = [];
+	let reelIndexes: number[] = [];
+	let debugInfo: any[] = [];
 
 	gameStore.subscribe(state => {
 		gameState = state;
@@ -38,6 +45,31 @@
 	function decreaseBet() {
 		gameStore.setBet(gameState.bet - 1);
 	}
+
+	function handleArrayUpdate(event: CustomEvent) {
+		const { reelIndex, array } = event.detail;
+		reelArrays[reelIndex] = array;
+		reelIndexes[reelIndex] = reelIndex;
+		reelArrays = [...reelArrays]; // Trigger reactivity
+		reelIndexes = [...reelIndexes]; // Trigger reactivity
+	}
+
+	function handleDebugUpdate(event: CustomEvent) {
+		const debugData = event.detail;
+		const existingIndex = debugInfo.findIndex(info => info.reelIndex === debugData.reelIndex);
+		
+		if (existingIndex >= 0) {
+			debugInfo[existingIndex] = debugData;
+		} else {
+			debugInfo.push(debugData);
+		}
+		
+		debugInfo = [...debugInfo]; // Trigger reactivity
+	}
+
+	function handleDebuggerVisibility(event: CustomEvent) {
+		debuggerVisible = event.detail.isVisible;
+	}
 </script>
 
 <div class="slot-machine">
@@ -64,10 +96,22 @@
 			<Reel 
 				symbols={reel.symbols}
 				isSpinning={reel.isSpinning}
-				
 				reelIndex={index}
+				on:arrayUpdate={handleArrayUpdate}
+				on:debugUpdate={handleDebugUpdate}
 			/>
 		{/each}
+		
+		<!-- Debugger Component -->
+		<div class="debugger-wrapper">
+			<Debugger 
+				reelArrays={reelArrays}
+				reelIndexes={reelIndexes}
+				debugInfo={debugInfo}
+				isVisible={debuggerVisible}
+				on:visibilityChanged={handleDebuggerVisibility}
+			/>
+		</div>
 	</div>
 
 	<div class="controls">
@@ -198,6 +242,7 @@
 		background: #f8f8f8;
 		border-radius: 8px;
 		border: 1px solid #ddd;
+		position: relative;
 	}
 
 	.controls {
@@ -405,6 +450,11 @@
 		.symbols-grid {
 			grid-template-columns: repeat(3, 1fr);
 		}
+	}
+
+	/* Debugger positioning */
+	.debugger-wrapper {
+		position: relative;
 	}
 
 	@media (max-width: 480px) {

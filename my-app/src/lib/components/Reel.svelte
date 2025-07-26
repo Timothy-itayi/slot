@@ -176,25 +176,9 @@
 		pointer-events: none;
 	}
 
-	.indicator-dot {
-		width: 12px;
-		height: 12px;
-		background: #22c55e;
-		border-radius: 50%;
-		box-shadow: 0 0 10px #22c55e;
-		animation: pulse-green 0.5s ease-in-out infinite alternate;
-	}
+	
 
-	@keyframes pulse-green {
-		0% {
-			transform: scale(1);
-			opacity: 1;
-		}
-		100% {
-			transform: scale(1.2);
-			opacity: 0.7;
-		}
-	}
+
 
 	@media (max-width: 768px) {
 		.reel-container {

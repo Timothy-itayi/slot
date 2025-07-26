@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import type { Symbol } from '../types.js';
+	import { GAME_CONFIG } from '../config.js';
 
 	export let reelArrays: Symbol[][] = [];
 	export let reelIndexes: number[] = [];
@@ -34,7 +35,7 @@
 	// Get the 4 visible array indices for a reel
 	function getVisibleIndices(currentPosition: number, arrayLength: number) {
 		const indices = [];
-		for (let i = 0; i < 4; i++) {
+		for (let i = 0; i < GAME_CONFIG.visibleSymbols; i++) {
 			const index = (currentPosition + i) % arrayLength;
 			indices.push(index);
 		}
@@ -113,7 +114,7 @@
 					{@const currentPosition = getCurrentPositionForReel(reelIndex)}
 					{@const visibleIndices = getCurrentIndicesForReel(reelIndex)}
 					<div class="reel-debug">
-						<!-- Array indices for 4 visible positions -->
+						<!-- Array indices for visible positions -->
 						{#each visibleIndices as index, position}
 							<div class="index-display">
 								<div class="index-number">[{index}]</div>

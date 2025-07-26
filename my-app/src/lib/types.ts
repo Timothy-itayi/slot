@@ -13,6 +13,7 @@ export interface GameState {
 	winAmount: number;
 	lastWin: number;
 	spinCount: number;
+	lastWins: WinResult[]; // Detailed win information for celebrations
 }
 
 export interface ReelState {
@@ -41,4 +42,7 @@ export interface WinResult {
 	symbol: Symbol;
 	multiplier: number;
 	amount: number;
+	reelIndex?: number; // Optional: for reel-specific wins
+	matchCount?: number; // Optional: number of matching symbols
+	winType?: 'payline' | 'reel' | 'horizontal'; // Type of win for display purposes
 } 

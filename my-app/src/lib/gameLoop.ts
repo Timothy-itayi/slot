@@ -20,10 +20,16 @@ function createGameLoop() {
 		
 		update(state => {
 			if (!isSpinning && state.isRunning) {
-				console.log('🎰 GAME LOOP: Spin cycle completed');
+				console.log('🎰 GAME LOOP: Spin cycle completed - setting isRunning to false');
 				return {
 					...state,
 					isRunning: false
+				};
+			} else if (isSpinning && !state.isRunning) {
+				console.log('🎰 GAME LOOP: Spin started - setting isRunning to true');
+				return {
+					...state,
+					isRunning: true
 				};
 			}
 			return state;
@@ -52,9 +58,18 @@ function createGameLoop() {
 		});
 	}
 
+	function resetState() {
+		console.log('🎰 GAME LOOP: Manually resetting state');
+		update(state => ({
+			...state,
+			isRunning: false
+		}));
+	}
+
 	return {
 		subscribe,
-		startSpin
+		startSpin,
+		resetState
 	};
 }
 

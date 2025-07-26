@@ -3,6 +3,8 @@
 	import { gameLoop } from '../gameLoop.js';
 	import Reel from './Reel.svelte';
 	import Debugger from './Debugger.svelte';
+	import RulesWindow from './RulesWindow.svelte';
+	import WinCelebration from './WinCelebration.svelte';
 	import { GAME_CONFIG, SYMBOLS } from '../config.js';
 	import type { ReelState, Symbol } from '../types.js';
 
@@ -16,8 +18,40 @@
 	let reelIndexes: number[] = [];
 	let debugInfo: any[] = [];
 
+	// Win highlighting state
+	let winningSymbols: Set<string> = new Set();
+	
+	// Auto-reset mechanism for stuck gameLoop
+	let resetTimeout: number;
+
 	gameStore.subscribe(state => {
 		gameState = state;
+		
+		// Track winning symbols for highlighting
+		if (state.lastWins.length > 0) {
+			winningSymbols = new Set(state.lastWins.map(win => win.symbol.id));
+		} else {
+			winningSymbols = new Set();
+		}
+		
+		// Auto-reset mechanism: if gameLoop is stuck for more than 10 seconds, reset it
+		if (state.isSpinning) {
+			// Clear any existing timeout
+			if (resetTimeout) {
+				clearTimeout(resetTimeout);
+			}
+		} else {
+			// If not spinning, set a timeout to reset gameLoop if it's still running
+			if (resetTimeout) {
+				clearTimeout(resetTimeout);
+			}
+			resetTimeout = setTimeout(() => {
+				if (gameLoopState.isRunning) {
+					console.log('🎰 SLOT MACHINE: Auto-resetting stuck gameLoop state');
+					gameLoop.resetState();
+				}
+			}, 10000); // 10 seconds
+		}
 	});
 
 	gameStore.reels.subscribe(state => {
@@ -29,6 +63,11 @@
 	});
 
 	function handleSpin() {
+		// Check if gameLoop is stuck and reset if needed
+		if (gameLoopState.isRunning && !gameState.isSpinning) {
+			console.log('🎰 SLOT MACHINE: Detected stuck gameLoop state, resetting...');
+			gameLoop.resetState();
+		}
 		gameLoop.startSpin();
 	}
 
@@ -52,6 +91,9 @@
 		reelIndexes[reelIndex] = reelIndex;
 		reelArrays = [...reelArrays]; // Trigger reactivity
 		reelIndexes = [...reelIndexes]; // Trigger reactivity
+		
+		// Update game store with reel data
+		gameStore.updateReelData(reelIndex, array, 0); // We'll update position separately
 	}
 
 	function handleDebugUpdate(event: CustomEvent) {
@@ -65,6 +107,15 @@
 		}
 		
 		debugInfo = [...debugInfo]; // Trigger reactivity
+	}
+
+	function handlePositionUpdate(event: CustomEvent) {
+		const { reelIndex, position } = event.detail;
+		
+		// Update game store with current position
+		if (reelArrays[reelIndex]) {
+			gameStore.updateReelData(reelIndex, reelArrays[reelIndex], position);
+		}
 	}
 
 	function handleDebuggerVisibility(event: CustomEvent) {
@@ -92,13 +143,15 @@
 	</header>
 
 	<div class="reels-container">
-		{#each reels as reel, index}
-			<Reel 
+				{#each reels as reel, index}
+			<Reel
 				symbols={reel.symbols}
 				isSpinning={reel.isSpinning}
 				reelIndex={index}
+				winningSymbols={Array.from(winningSymbols)}
 				on:arrayUpdate={handleArrayUpdate}
 				on:debugUpdate={handleDebugUpdate}
+				on:positionUpdate={handlePositionUpdate}
 			/>
 		{/each}
 		
@@ -158,21 +211,48 @@
 
 	{#if gameState.winAmount > 0}
 		<div class="win-notification">
-			WIN! ${gameState.winAmount}
+			<div class="win-amount">WIN! ${gameState.winAmount}</div>
+			<div class="win-details">
+				{#if gameState.lastWin > 0}
+					<div class="win-breakdown">
+						<span class="win-label">Last Win Breakdown:</span>
+						<span class="win-value">${gameState.lastWin}</span>
+					</div>
+				{/if}
+			</div>
 		</div>
 	{/if}
 
+	<WinCelebration 
+		wins={gameState.lastWins} 
+		isVisible={gameState.winAmount > 0}
+		on:close={() => {
+			gameStore.clearWins();
+		}}
+	/>
+
 	<div class="paytable">
 		<h3>Paytable</h3>
+		<div class="prize-info">
+			<p class="prize-description">Match 3+ symbols on any reel OR the same symbol across all reels horizontally!</p>
+		</div>
+
+	
 		<div class="symbols-grid">
 			{#each SYMBOLS as symbol}
 				<div class="symbol-item">
 					<span class="symbol-emoji">{symbol.emoji}</span>
 					<span class="symbol-value">${symbol.value}</span>
+					<div class="symbol-matches">
+						<span class="match-3">3×: ${symbol.value * 3}</span>
+						<span class="horizontal-match">Horizontal: ${symbol.value * GAME_CONFIG.reels * 2}</span>
+					</div>
 				</div>
 			{/each}
 		</div>
 	</div>
+
+	<RulesWindow />
 </div>
 
 <style>
@@ -379,6 +459,52 @@
 		letter-spacing: 0.5px;
 	}
 
+	.prize-info {
+		text-align: center;
+		margin-bottom: 15px;
+		padding: 10px;
+		background: #e0e0e0;
+		border-radius: 6px;
+		border: 1px solid #ccc;
+	}
+
+	.prize-description {
+		color: #666;
+		font-size: 0.8rem;
+		margin: 0;
+	}
+
+	.winning-types {
+		display: flex;
+		gap: 15px;
+		margin-bottom: 15px;
+		justify-content: center;
+	}
+
+	.win-type {
+		text-align: center;
+		padding: 10px;
+		background: #e8f4fd;
+		border-radius: 6px;
+		border: 1px solid #b3d9ff;
+		flex: 1;
+		max-width: 200px;
+	}
+
+	.win-type h4 {
+		margin: 0 0 5px 0;
+		color: #000;
+		font-size: 0.85rem;
+		font-weight: bold;
+	}
+
+	.win-type p {
+		margin: 0;
+		color: #666;
+		font-size: 0.75rem;
+		line-height: 1.2;
+	}
+
 	.symbols-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
@@ -405,6 +531,22 @@
 		color: #000;
 		font-weight: bold;
 		font-size: 0.8rem;
+	}
+
+	.symbol-matches {
+		margin-top: 5px;
+		font-size: 0.7rem;
+		color: #666;
+	}
+
+	.match-3 {
+		display: block;
+	}
+
+	.horizontal-match {
+		display: block;
+		color: #9c27b0;
+		font-weight: bold;
 	}
 
 	@media (max-width: 768px) {

@@ -9,7 +9,8 @@ function createGameStore() {
 		isSpinning: false,
 		winAmount: 0,
 		lastWin: 0,
-		spinCount: 0
+		spinCount: 0,
+		lastWins: []
 	});
 
 	const reels = writable<ReelState[]>(
@@ -27,53 +28,147 @@ function createGameStore() {
 		});
 	}
 
+	// Store full reel arrays from Reel components
+	let reelArrays: Symbol[][] = [];
+	let reelPositions: number[] = [];
+
+	function updateReelData(reelIndex: number, array: Symbol[], position: number) {
+		console.log(`🎰 GAME STORE: updateReelData called for reel ${reelIndex + 1}, position: ${position}, array length: ${array.length}`);
+		reelArrays[reelIndex] = array;
+		reelPositions[reelIndex] = position;
+	}
+
 	function getVisibleSymbols(reelIndex: number): Symbol[] {
-		let currentReels: ReelState[] = [];
-		reels.subscribe(value => currentReels = value)();
-		
-		const reel = currentReels[reelIndex];
+		if (!reelArrays[reelIndex] || reelArrays[reelIndex].length === 0) {
+			console.log(`🎰 GAME STORE: Reel ${reelIndex + 1} - Using fallback method (no reel array)`);
+			// Fallback to original method if reel array not available
+			let currentReels: ReelState[] = [];
+			reels.subscribe(value => currentReels = value)();
+			
+			const reel = currentReels[reelIndex];
+			const visible: Symbol[] = [];
+			
+			for (let i = 0; i < GAME_CONFIG.visibleSymbols; i++) {
+				const index = (reel.position + i) % reel.symbols.length;
+				visible.push(reel.symbols[index]);
+			}
+			
+			return visible;
+		}
+
+		// Use the full reel array and current position
+		const reelArray = reelArrays[reelIndex];
+		const position = reelPositions[reelIndex] || 0;
 		const visible: Symbol[] = [];
 		
+		console.log(`🎰 GAME STORE: Reel ${reelIndex + 1} - Using array method, position: ${position}, array length: ${reelArray.length}`);
+		
 		for (let i = 0; i < GAME_CONFIG.visibleSymbols; i++) {
-			const index = (reel.position + i) % reel.symbols.length;
-			visible.push(reel.symbols[index]);
+			const index = (position + i) % reelArray.length;
+			visible.push(reelArray[index]);
 		}
 		
+		console.log(`🎰 GAME STORE: Reel ${reelIndex + 1} visible symbols:`, visible.map(s => s.emoji).join(' '));
 		return visible;
 	}
 
-	function checkWinningLines(): WinResult[] {
-		const visibleSymbols: Symbol[][] = [];
+	// Function to check for matching symbols within each reel (3 or more symbols)
+	function checkReelMatches(): WinResult[] {
+		const results: WinResult[] = [];
 		
+		console.log('🎰 GAME STORE: Checking reel matches...');
+		console.log('🎰 GAME STORE: reelArrays:', reelArrays.length);
+		console.log('🎰 GAME STORE: reelPositions:', reelPositions);
+		
+		for (let reelIndex = 0; reelIndex < GAME_CONFIG.reels; reelIndex++) {
+			const visibleSymbols = getVisibleSymbols(reelIndex);
+			
+			console.log(`🎰 REEL ${reelIndex + 1} visible symbols:`, visibleSymbols.map(s => s.emoji).join(' '));
+			
+			// Count occurrences of each symbol
+			const symbolCounts = new Map<string, { symbol: Symbol; count: number }>();
+			
+			visibleSymbols.forEach(symbol => {
+				const existing = symbolCounts.get(symbol.id);
+				if (existing) {
+					existing.count++;
+				} else {
+					symbolCounts.set(symbol.id, { symbol, count: 1 });
+				}
+			});
+			
+			// Check for 3 or more symbols on the same reel
+			symbolCounts.forEach(({ symbol, count }) => {
+				if (count >= 3) {
+					console.log(`🎰 REEL ${reelIndex + 1} WIN: ${count}× ${symbol.emoji} (${symbol.name})`);
+					// Calculate prize: symbol value * count
+					const prizeAmount = symbol.value * count;
+					
+					results.push({
+						payLine: { positions: [], multiplier: count },
+						symbol: symbol,
+						multiplier: count,
+						amount: prizeAmount,
+						reelIndex: reelIndex,
+						matchCount: count,
+						winType: 'reel'
+					});
+				}
+			});
+		}
+		
+		console.log('🎰 GAME STORE: Reel matches found:', results.length);
+		return results;
+	}
+
+	// Function to check for horizontal wins (same symbol across all reels at same level)
+	function checkHorizontalWins(): WinResult[] {
+		const results: WinResult[] = [];
+		
+		console.log('🎰 GAME STORE: Checking horizontal wins...');
+		
+		// Get visible symbols from all reels
+		const visibleSymbols: Symbol[][] = [];
 		for (let i = 0; i < GAME_CONFIG.reels; i++) {
 			visibleSymbols.push(getVisibleSymbols(i));
 		}
 		
-		const results: WinResult[] = [];
+		console.log('🎰 HORIZONTAL CHECK:');
+		for (let level = 0; level < GAME_CONFIG.visibleSymbols; level++) {
+			const symbolsAtLevel = visibleSymbols.map(reel => reel[level]);
+			console.log(`Level ${level}:`, symbolsAtLevel.map(s => s.emoji).join(' | '));
+		}
 		
-		GAME_CONFIG.payLines.forEach(payLine => {
-			const lineSymbols = payLine.positions.map(pos => {
-				const reelIndex = Math.floor(pos / GAME_CONFIG.visibleSymbols);
-				const symbolIndex = pos % GAME_CONFIG.visibleSymbols;
-				return visibleSymbols[reelIndex][symbolIndex];
-			});
+		// Check each level (top, middle, bottom) across all reels
+		for (let level = 0; level < GAME_CONFIG.visibleSymbols; level++) {
+			const symbolsAtLevel = visibleSymbols.map(reel => reel[level]);
+			const firstSymbol = symbolsAtLevel[0];
 			
-			// Check if all symbols in the line are the same
-			const firstSymbol = lineSymbols[0];
-			const isWinningLine = lineSymbols.every(symbol => symbol.id === firstSymbol.id);
+			// Check if all symbols at this level are the same
+			const isWinningLevel = symbolsAtLevel.every(symbol => symbol.id === firstSymbol.id);
 			
-			if (isWinningLine) {
+			if (isWinningLevel) {
+				console.log(`🎰 HORIZONTAL WIN at level ${level}: ${firstSymbol.emoji} (${firstSymbol.name})`);
+				// Calculate prize: symbol value * number of reels * bonus multiplier
+				const prizeAmount = firstSymbol.value * GAME_CONFIG.reels * 2; // 2x bonus for horizontal match
+				
 				results.push({
-					payLine,
+					payLine: { positions: [], multiplier: GAME_CONFIG.reels * 2 },
 					symbol: firstSymbol,
-					multiplier: payLine.multiplier,
-					amount: firstSymbol.value * payLine.multiplier
+					multiplier: GAME_CONFIG.reels * 2,
+					amount: prizeAmount,
+					reelIndex: -1, // -1 indicates horizontal win (not reel-specific)
+					matchCount: GAME_CONFIG.reels,
+					winType: 'horizontal' // Add win type for display
 				});
 			}
-		});
+		}
 		
+		console.log('🎰 GAME STORE: Horizontal wins found:', results.length);
 		return results;
 	}
+
+	// Removed payline wins - only checking reel matches and index matches
 
 	function spin() {
 		console.log('🎰 GAME STORE: spin() called at', new Date().toLocaleTimeString());
@@ -123,18 +218,28 @@ function createGameStore() {
 					// Check for wins after the last reel stops
 					if (index === GAME_CONFIG.reels - 1) {
 						setTimeout(() => {
-							const wins = checkWinningLines();
-							const totalWin = wins.reduce((sum, win) => sum + win.amount, 0);
+							// Check for reel matches and horizontal wins only
+							const reelMatches = checkReelMatches();
+							const horizontalWins = checkHorizontalWins();
+							
+							// Combine all wins
+							const allWins = [...reelMatches, ...horizontalWins];
+							const totalWin = allWins.reduce((sum, win) => sum + win.amount, 0);
 
 							console.log('🎰 GAME STORE: Spin cycle completed');
+							console.log('🎰 GAME STORE: Reel matches:', reelMatches.length);
+							console.log('🎰 GAME STORE: Horizontal wins:', horizontalWins.length);
+							console.log('🎰 GAME STORE: Total win amount:', totalWin);
+							
 							update(state => ({
 								...state,
 								isSpinning: false,
 								winAmount: totalWin,
 								lastWin: totalWin,
-								balance: state.balance + totalWin
+								balance: state.balance + totalWin,
+								lastWins: allWins // Store detailed win information
 							}));
-						}, 100);
+						}, 500); // Increased delay to ensure position updates are processed
 					}
 				}, index * 500); // 500ms delay between each reel stopping
 			}
@@ -155,7 +260,8 @@ function createGameStore() {
 			isSpinning: false,
 			winAmount: 0,
 			lastWin: 0,
-			spinCount: 0
+			spinCount: 0,
+			lastWins: []
 		});
 
 		reels.set(
@@ -167,14 +273,25 @@ function createGameStore() {
 		);
 	}
 
+	function clearWins() {
+		update(state => ({
+			...state,
+			winAmount: 0,
+			lastWins: []
+		}));
+	}
+
 	return {
 		subscribe,
 		reels: { subscribe: reels.subscribe },
 		spin,
 		setBet,
 		reset,
+		clearWins,
 		getVisibleSymbols,
-		checkWinningLines
+		updateReelData,
+		checkReelMatches,
+		checkHorizontalWins
 	};
 }
 

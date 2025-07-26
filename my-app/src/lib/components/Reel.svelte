@@ -7,6 +7,7 @@
 	export let symbols: Symbol[] = [];
 	export let isSpinning = false;
 	export let reelIndex = 0;
+	export let winningSymbols: string[] = [];
 
 	const dispatch = createEventDispatcher();
 
@@ -23,11 +24,32 @@
 	// Track current position for debugging
 	let currentPosition = 0;
 	let spinCount = 0;
-	
-	// Initialize with a large array (100 sets of symbols)
+
+	// Function to shuffle an array (Fisher-Yates algorithm)
+	function shuffleArray(array: Symbol[]): Symbol[] {
+		const shuffled = [...array];
+		for (let i = shuffled.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
+		return shuffled;
+	}
+
+	// Function to generate a randomized set of symbols
+	function generateRandomizedSet(): Symbol[] {
+		return shuffleArray(symbols);
+	}
+
+	// Initialize with a large array (100 sets of randomized symbols)
 	$: if (symbols.length > 0 && reelArray.length === 0) {
-		reelArray = Array(100).fill(symbols).flat();
-		console.log(`🎰 REEL ${reelIndex + 1}: Initialized with ${reelArray.length} symbols`);
+		// Generate 100 sets of randomized symbols
+		const randomizedSets: Symbol[] = [];
+		for (let i = 0; i < 100; i++) {
+			const randomizedSet = generateRandomizedSet();
+			randomizedSets.push(...randomizedSet);
+		}
+		reelArray = randomizedSets;
+		console.log(`🎰 REEL ${reelIndex + 1}: Initialized with ${reelArray.length} randomized symbols`);
 	}
 
 	// No need for array extension with pre-allocated large array
@@ -44,20 +66,42 @@
 			animation.kill();
 		}
 		
-		// Get current position
-		const currentY = Number(gsap.getProperty(reelFrame, "y")) || 0;
+		// Reset position to 0 for consistent starting point
+		gsap.set(reelFrame, { y: 0 });
+		currentPosition = 0;
 		
-		// Calculate animation distance (1 full cycle through the array)
+		// Calculate animation distance (just slightly more than original symbols)
 		const symbolHeight = 60;
-		const totalDistance = symbols.length * symbolHeight;
+		const setsToSpin = 1 + Math.floor(Math.random() * 2); // 1-2 sets
+		const extraSymbols = Math.floor(Math.random() * symbols.length); // 0-19 extra symbols
+		const totalDistance = (symbols.length * setsToSpin + extraSymbols) * symbolHeight;
+		
+		// Slower animation duration for better position tracking
+		const baseDuration = 8; // 8 seconds
+		const randomOffset = (Math.random() - 0.5) * 1; // ±0.5 second variation
+		const duration = baseDuration + randomOffset;
 		
 		// Create simple animation
 		animation = gsap.to(reelFrame, {
-			y: currentY - totalDistance,
-			duration: 8, // 8 seconds
+			y: -totalDistance,
+			duration: duration,
 			ease: "power2.out",
+			onUpdate: () => {
+				// Update current position based on animation
+				const newY = Number(gsap.getProperty(reelFrame, "y")) || 0;
+				const symbolHeight = 60;
+				currentPosition = Math.floor(Math.abs(newY) / symbolHeight) % reelArray.length;
+			},
 			onComplete: () => {
 				console.log(`🎰 REEL ${reelIndex + 1}: Animation completed`);
+				// Final position update
+				const finalY = Number(gsap.getProperty(reelFrame, "y")) || 0;
+				const symbolHeight = 60;
+				currentPosition = Math.floor(Math.abs(finalY) / symbolHeight) % reelArray.length;
+				
+				// Ensure position is within bounds
+				currentPosition = currentPosition % reelArray.length;
+				console.log(`🎰 REEL ${reelIndex + 1}: Final position: ${currentPosition}`);
 			}
 		});
 	}
@@ -67,11 +111,8 @@
 		animateReel();
 	}
 
-	// Stop animation when isSpinning becomes false
-	$: if (!isSpinning && animation) {
-		animation.kill();
-		console.log(`🎰 REEL ${reelIndex + 1}: Animation stopped`);
-	}
+	// Don't kill animation when isSpinning becomes false - let it complete naturally
+	// The game store will handle stopping the reels at the right time
 
 	// Dispatch array data for debugger
 	$: if (reelArray.length > 0) {
@@ -94,6 +135,12 @@
 			preAllocatedSets: Math.floor(reelArray.length / originalSymbolCount),
 			currentPosition
 		});
+		
+		// Also dispatch position updates for win detection
+		dispatch('positionUpdate', {
+			reelIndex,
+			position: currentPosition
+		});
 	}
 
 	onDestroy(() => {
@@ -113,7 +160,11 @@
 	
 	<div class="reel-frame" bind:this={reelFrame}>
 		{#each reelArray as symbol, index}
-			<div class="symbol" style="color: {symbol.color}">
+			<div 
+				class="symbol" 
+				class:winning-symbol={winningSymbols.includes(symbol.id)}
+				style="color: {symbol.color}"
+			>
 				{symbol.emoji}
 			</div>
 		{/each}
@@ -123,7 +174,7 @@
 <style>
 	.reel-container {
 		display: flex;
-		flex-direction: column;
+		flex-direction:column ;
 		align-items: center;
 		width: 80px;
 		height: 240px;
@@ -166,6 +217,26 @@
 		border-right: 3px solid #333;
 	}
 
+	/* Highlight winning symbols */
+	.winning-symbol {
+		background: linear-gradient(45deg, #ffd700, #ffed4e) !important;
+		box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+		animation: winning-pulse 1s ease-in-out infinite;
+		border: 2px solid #ff6b35;
+		transform: scale(1.05);
+	}
+
+	@keyframes winning-pulse {
+		0%, 100% { 
+			box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+			transform: scale(1.05);
+		}
+		50% { 
+			box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+			transform: scale(1.1);
+		}
+	}
+
 	/* Movement Indicator */
 	.movement-indicator {
 		position: absolute;
@@ -176,25 +247,9 @@
 		pointer-events: none;
 	}
 
-	.indicator-dot {
-		width: 12px;
-		height: 12px;
-		background: #22c55e;
-		border-radius: 50%;
-		box-shadow: 0 0 10px #22c55e;
-		animation: pulse-green 0.5s ease-in-out infinite alternate;
-	}
+	
 
-	@keyframes pulse-green {
-		0% {
-			transform: scale(1);
-			opacity: 1;
-		}
-		100% {
-			transform: scale(1.2);
-			opacity: 0.7;
-		}
-	}
+
 
 	@media (max-width: 768px) {
 		.reel-container {
@@ -212,6 +267,7 @@
 		.reel-container {
 			width: 50px;
 			height: 150px;
+			
 		}
 
 		.symbol {

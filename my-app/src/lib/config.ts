@@ -20,7 +20,7 @@ export const PAY_LINES: PayLine[] = [
 export const GAME_CONFIG: GameConfig = {
 	reels: 3,
 	symbolsPerReel: 20,
-	visibleSymbols: 3,
+	visibleSymbols: 4, // Changed from 3 to 4 for 4 levels deep
 	minBet: 1,
 	maxBet: 100,
 	payLines: PAY_LINES,

@@ -20,9 +20,6 @@ function createGameStore() {
 		}))
 	);
 
-	// Track timeouts to clear them on new spins
-	let spinTimeouts: number[] = [];
-
 	function generateReelSymbols(): Symbol[] {
 		return Array.from({ length: GAME_CONFIG.symbolsPerReel }, () => {
 			const randomIndex = Math.floor(Math.random() * SYMBOLS.length);
@@ -79,10 +76,8 @@ function createGameStore() {
 	}
 
 	function spin() {
-		// Clear any existing timeouts from previous spins
-		spinTimeouts.forEach(timeoutId => clearTimeout(timeoutId));
-		spinTimeouts = [];
-
+		console.log('🎰 GAME STORE: spin() called at', new Date().toLocaleTimeString());
+		
 		update(state => {
 			if (state.balance < state.bet) return state;
 			
@@ -95,19 +90,10 @@ function createGameStore() {
 			};
 		});
 
-		// Start spinning reels with cascading delays
-		// Each reel starts 500ms after the previous one
-		// Don't reset positions - let reels continue from where they are
-		reels.update(currentReels => {
-			return currentReels.map((reel, index) => ({
-				...reel,
-				isSpinning: false // Start with all reels not spinning, but keep current positions
-			}));
-		});
-
-		// Start each reel with a delay
+		// Start all reels spinning with cascading delays
 		for (let index = 0; index < GAME_CONFIG.reels; index++) {
-			const timeoutId = setTimeout(() => {
+			setTimeout(() => {
+				console.log(`🎰 GAME STORE: Starting reel ${index + 1}`);
 				reels.update(currentReels => {
 					const updatedReels = [...currentReels];
 					updatedReels[index] = {
@@ -116,34 +102,31 @@ function createGameStore() {
 					};
 					return updatedReels;
 				});
-			}, index * 500); // 500ms delay between each reel starting
-			spinTimeouts.push(timeoutId);
+			}, index * 500); // 500ms delay between each reel
 		}
 
-		// Stop reels with cascading delays and check for wins
-		// Total spin duration: 8000ms + (reel count - 1) * 500ms for start delays
-		const totalSpinDuration = 8000 + (GAME_CONFIG.reels - 1) * 500;
-		
-		const mainTimeoutId = setTimeout(() => {
-			// Stop reels one by one with 500ms delays
+		// Stop all reels after 8 seconds with cascading delays
+		setTimeout(() => {
+			console.log('🎰 GAME STORE: Stopping reels');
 			for (let index = 0; index < GAME_CONFIG.reels; index++) {
-				const stopTimeoutId = setTimeout(() => {
+				setTimeout(() => {
+					console.log(`🎰 GAME STORE: Stopping reel ${index + 1}`);
 					reels.update(currentReels => {
 						const updatedReels = [...currentReels];
 						updatedReels[index] = {
 							...updatedReels[index],
 							isSpinning: false
-							// Don't set random position - let reel continue from where it stopped
 						};
 						return updatedReels;
 					});
 
 					// Check for wins after the last reel stops
 					if (index === GAME_CONFIG.reels - 1) {
-						const winTimeoutId = setTimeout(() => {
+						setTimeout(() => {
 							const wins = checkWinningLines();
 							const totalWin = wins.reduce((sum, win) => sum + win.amount, 0);
 
+							console.log('🎰 GAME STORE: Spin cycle completed');
 							update(state => ({
 								...state,
 								isSpinning: false,
@@ -151,14 +134,11 @@ function createGameStore() {
 								lastWin: totalWin,
 								balance: state.balance + totalWin
 							}));
-						}, 100); // Small delay to ensure all reels have stopped
-						spinTimeouts.push(winTimeoutId);
+						}, 100);
 					}
 				}, index * 500); // 500ms delay between each reel stopping
-				spinTimeouts.push(stopTimeoutId);
 			}
-		}, totalSpinDuration);
-		spinTimeouts.push(mainTimeoutId);
+		}, 8000); // 8 seconds total spin duration
 	}
 
 	function setBet(amount: number) {

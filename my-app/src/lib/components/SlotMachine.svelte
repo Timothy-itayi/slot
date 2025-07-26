@@ -64,7 +64,7 @@
 			<Reel 
 				symbols={reel.symbols}
 				isSpinning={reel.isSpinning}
-				position={reel.position}
+				
 				reelIndex={index}
 			/>
 		{/each}

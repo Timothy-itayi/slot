@@ -9,13 +9,7 @@
 
 	export let symbols: Symbol[] = [];
 
-	// Function to generate new random symbols for this reel
-	function generateNewSymbols(): Symbol[] {
-		return Array.from({ length: GAME_CONFIG.symbolsPerReel }, () => {
-			const randomIndex = Math.floor(Math.random() * SYMBOLS.length);
-			return SYMBOLS[randomIndex];
-		});
-	}
+
 	export let isSpinning = false;
 	export let position = 0;
 	export let reelIndex = 0;
@@ -25,7 +19,6 @@
 	let container: HTMLElement;
 	let reelFrame: HTMLElement;
 	let spinning = false;
-	let spinDelay = 2000;
 	let spinDuration = 8000;
 	let animation: gsap.core.Timeline;
 	interface DebugSymbol {
@@ -54,9 +47,9 @@
 		maxSymbolIndex: 0
 	};
 
-	// Create duplicated symbols for infinite scroll effect - ensure all reels have the same infinite scroll behavior
-	// Use more repetitions to handle longer spin distances for reels 2 and 3
-	$: duplicatedSymbols = symbols.length > 0 ? [...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols, ...symbols] : [];
+	// Create duplicated symbols for infinite scroll effect - much larger array for continuous spinning
+	// Each reel has 50 repetitions of the original symbols for very long spin distances
+	$: duplicatedSymbols = symbols.length > 0 ? Array(50).fill(symbols).flat() : [];
 
 	function updateSymbols() {
 		if (!container) return;
@@ -72,7 +65,7 @@
 			const symbol = duplicatedSymbols[symbolIndex];
 			
 			if (symbol && element instanceof HTMLElement) {
-				element.textContent = symbol.emoji;
+				// Never update symbol text - keep symbols completely static
 				element.style.color = symbol.color;
 				visibleSymbols.push({
 					index: symbolIndex,
@@ -90,21 +83,21 @@
 	}
 
 	function startSpin() {
-		if (!reelFrame || spinning) return;
+		if (!reelFrame) return;
 
-		spinning = true;
-		
-		// Kill any existing animation
+		// Always kill any existing animation first
 		if (animation) {
 			animation.kill();
 		}
 
-		// Generate new random symbols for this reel (same as reel 1 behavior)
-		// This ensures each reel gets fresh symbols when it starts spinning
-		symbols = generateNewSymbols();
+		// Don't reset position - let it continue from where it is
+		// Get current position to continue from there
+		const currentY = Number(gsap.getProperty(reelFrame, "y")) || 0;
 
-		// Calculate target position within the duplicated symbols
-		const targetPosition = Math.floor(Math.random() * symbols.length);
+		spinning = true;
+		
+		// Calculate spin distance based on revolutions
+		// Don't set a specific target - just spin for the duration
 		const revolutions = reelIndex === 0 ? 1 : 2; // 1, 2, 2 revolutions
 		const totalDistance = revolutions * symbols.length * 60; // 60px per symbol
 		
@@ -115,58 +108,54 @@
 		animation = gsap.timeline({
 			onComplete: () => {
 				spinning = false;
-				internalPosition = targetPosition;
-				updateSymbols();
+				// Animation complete - reel has physically scrolled
 			}
 		});
 
 		// Animate the reel frame with infinite scroll effect
+		// Start from current position and animate to new position
 		animation.to(reelFrame, {
-			y: -totalDistance,
+			y: currentY - totalDistance,
 			duration: spinDuration / 1000, // Convert to seconds
 			ease: "power2.out", // Smooth deceleration
 			onUpdate: () => {
 				// Calculate current position based on animation progress
 				const progress = animation.progress();
 				const currentDistance = totalDistance * progress;
-				const currentSymbolPosition = Math.floor(currentDistance / 80);
 				
 				// Update debug info
 				debugInfo.scrollProgress = progress;
 				debugInfo.currentPosition = currentDistance;
-				
-				// Update internal position to show symbols in infinite loop
-				// Use modulo to ensure we stay within the duplicated symbols array
-				// Ensure positive modulo for consistent infinite scroll behavior
-				internalPosition = ((currentSymbolPosition % duplicatedSymbols.length) + duplicatedSymbols.length) % duplicatedSymbols.length;
-				updateSymbols();
 			}
 		});
 	}
 
-	// Initialize internal position when position prop changes
-	$: if (position !== undefined && !spinning) {
+	// Initialize internal position when position prop changes (only on first load)
+	$: if (position !== undefined && !spinning && internalPosition === 0) {
 		internalPosition = position;
-		updateSymbols();
 	}
 
+	// Watch for changes in isSpinning prop
 	$: if (isSpinning && !spinning) {
-		// Start spin with delay based on reel index
-		// Reel 1 starts immediately, Reel 2 after delay, Reel 3 after longer delay
-		// This creates the cascading effect where reels start and stop in sequence
-		setTimeout(() => {
-			startSpin();
-		}, reelIndex * spinDuration + spinDelay);
+		// Start spin immediately when isSpinning becomes true
+		// The cascading effect is now handled by the game store
+		startSpin();
 	}
 
-	// Update symbols when duplicated symbols change
-	$: if (duplicatedSymbols.length > 0) {
-		updateSymbols();
+	// Reset internal spinning state when isSpinning becomes false
+	$: if (!isSpinning && spinning) {
+		spinning = false;
+		if (animation) {
+			animation.kill();
+		}
 	}
 
-	// Ensure symbols are updated when the symbols array changes
-	$: if (symbols.length > 0 && !spinning) {
-		updateSymbols();
+	// Force reset internal state when isSpinning changes to false
+	$: if (!isSpinning) {
+		spinning = false;
+		if (animation) {
+			animation.kill();
+		}
 	}
 
 	onDestroy(() => {
@@ -177,35 +166,51 @@
 </script>
 
 <div class="reel-container" bind:this={container} class:spinning>
+	<!-- Green movement indicator -->
+	{#if spinning}
+		<div class="movement-indicator">
+			<div class="indicator-dot"></div>
+		</div>
+	{/if}
+	
 	<div class="reel-frame" bind:this={reelFrame}>
 		{#each Array(GAME_CONFIG.visibleSymbols + 40) as _, index}
 			<div class="symbol">
-				{duplicatedSymbols.length > 0 ? duplicatedSymbols[((internalPosition + index) % duplicatedSymbols.length + duplicatedSymbols.length) % duplicatedSymbols.length]?.emoji : '?'}
+				{duplicatedSymbols.length > 0 ? duplicatedSymbols[index % duplicatedSymbols.length]?.emoji : '?'}
 			</div>
 		{/each}
 	</div>
 </div>
 
 <!-- Debug Panel -->
-{#if spinning}
-	<div class="debug-panel">
-		<h4>Reel {reelIndex + 1} Debug</h4>
-		<div class="debug-info">
-			<p><strong>Scroll Progress:</strong> {(debugInfo.scrollProgress * 100).toFixed(1)}%</p>
-			<p><strong>Current Distance:</strong> {debugInfo.currentPosition.toFixed(0)}px</p>
-			<p><strong>Total Distance:</strong> {debugInfo.totalDistance}px</p>
-			<p><strong>Symbol Index:</strong> {debugInfo.symbolIndex}</p>
-			<p><strong>Duplicated Symbols:</strong> {debugInfo.duplicatedSymbolsLength}</p>
-			<p><strong>Max Symbol Index:</strong> {debugInfo.maxSymbolIndex}</p>
-			<p><strong>Visible Symbols:</strong></p>
-			<div class="symbol-list">
-				{#each debugInfo.visibleSymbols.slice(0, 5) as symbol}
-					<span class="debug-symbol">{symbol.symbol}</span>
-				{/each}
-			</div>
+<div class="debug-panel">
+	<h4>Reel {reelIndex + 1} Debug</h4>
+	<div class="debug-info">
+		<p><strong>Spin Status:</strong> 
+			<span class="status-indicator {spinning ? 'spinning' : 'stopped'}">
+				{spinning ? '🟢 SPINNING' : '🔴 STOPPED'}
+			</span>
+		</p>
+		<p><strong>Is Spinning Prop:</strong> 
+			<span class="status-indicator {isSpinning ? 'spinning' : 'stopped'}">
+				{isSpinning ? '🟢 TRUE' : '🔴 FALSE'}
+			</span>
+		</p>
+		<p><strong>Internal Position:</strong> {internalPosition}</p>
+		<p><strong>Scroll Progress:</strong> {(debugInfo.scrollProgress * 100).toFixed(1)}%</p>
+		<p><strong>Current Distance:</strong> {debugInfo.currentPosition.toFixed(0)}px</p>
+		<p><strong>Total Distance:</strong> {debugInfo.totalDistance}px</p>
+		<p><strong>Symbol Index:</strong> {debugInfo.symbolIndex}</p>
+		<p><strong>Duplicated Symbols:</strong> {debugInfo.duplicatedSymbolsLength}</p>
+		<p><strong>Max Symbol Index:</strong> {debugInfo.maxSymbolIndex}</p>
+		<p><strong>Visible Symbols:</strong></p>
+		<div class="symbol-list">
+			{#each debugInfo.visibleSymbols.slice(0, 5) as symbol}
+				<span class="debug-symbol">{symbol.symbol}</span>
+			{/each}
 		</div>
 	</div>
-{/if}
+</div>
 
 <style>
 	.reel-container {
@@ -285,6 +290,23 @@
 		line-height: 1.2;
 	}
 
+	.status-indicator {
+		font-weight: bold;
+		padding: 2px 6px;
+		border-radius: 3px;
+		font-size: 11px;
+	}
+
+	.status-indicator.spinning {
+		background: #22c55e;
+		color: white;
+	}
+
+	.status-indicator.stopped {
+		background: #ef4444;
+		color: white;
+	}
+
 	.symbol-list {
 		display: flex;
 		gap: 5px;
@@ -296,6 +318,36 @@
 		padding: 2px 6px;
 		border-radius: 3px;
 		font-size: 14px;
+	}
+
+	/* Movement Indicator Styles */
+	.movement-indicator {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		z-index: 100;
+		pointer-events: none;
+	}
+
+	.indicator-dot {
+		width: 12px;
+		height: 12px;
+		background: #22c55e;
+		border-radius: 50%;
+		box-shadow: 0 0 10px #22c55e;
+		animation: pulse-green 0.5s ease-in-out infinite alternate;
+	}
+
+	@keyframes pulse-green {
+		0% {
+			transform: scale(1);
+			opacity: 1;
+		}
+		100% {
+			transform: scale(1.2);
+			opacity: 0.7;
+		}
 	}
 
 	@media (max-width: 768px) {

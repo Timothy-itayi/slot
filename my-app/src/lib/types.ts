@@ -14,6 +14,7 @@ export interface GameState {
 	lastWin: number;
 	spinCount: number;
 	lastWins: WinResult[]; // Detailed win information for celebrations
+	totalWinnings: number; // Track cumulative winnings across all spins
 }
 
 export interface ReelState {

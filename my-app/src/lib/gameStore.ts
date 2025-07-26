@@ -10,7 +10,8 @@ function createGameStore() {
 		winAmount: 0,
 		lastWin: 0,
 		spinCount: 0,
-		lastWins: []
+		lastWins: [],
+		totalWinnings: 0
 	});
 
 	const reels = writable<ReelState[]>(
@@ -237,7 +238,8 @@ function createGameStore() {
 								winAmount: totalWin,
 								lastWin: totalWin,
 								balance: state.balance + totalWin,
-								lastWins: allWins // Store detailed win information
+								lastWins: allWins, // Store detailed win information
+								totalWinnings: state.totalWinnings + totalWin // Accumulate total winnings
 							}));
 						}, 500); // Increased delay to ensure position updates are processed
 					}
@@ -261,7 +263,8 @@ function createGameStore() {
 			winAmount: 0,
 			lastWin: 0,
 			spinCount: 0,
-			lastWins: []
+			lastWins: [],
+			totalWinnings: 0
 		});
 
 		reels.set(

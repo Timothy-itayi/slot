@@ -29,4 +29,6 @@ export const GAME_CONFIG: GameConfig = {
 
 export const INITIAL_BALANCE = 1000;
 export const SPIN_DURATION = 8000; // milliseconds
-export const REEL_SPIN_DELAY = 2000; // delay between reels starting 
+export const REEL_START_DELAY = 500; // delay between reels starting (ms)
+export const REEL_STOP_DELAY = 500; // delay between reels stopping (ms)
+export const WIN_CHECK_DELAY = 100; // delay before checking wins (ms) 

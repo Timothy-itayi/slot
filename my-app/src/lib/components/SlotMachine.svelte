@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { gameStore } from '../gameStore.js';
+	import { gameLoop } from '../gameLoop.js';
 	import Reel from './Reel.svelte';
 	import { GAME_CONFIG, SYMBOLS } from '../config.js';
 	import type { ReelState } from '../types.js';
 
 	let reels: ReelState[] = [];
 	let gameState: any = {};
+	let gameLoopState: any = {};
 
 	gameStore.subscribe(state => {
 		gameState = state;
@@ -15,18 +17,18 @@
 		reels = state;
 	});
 
+	gameLoop.subscribe(state => {
+		gameLoopState = state;
+	});
+
 	function handleSpin() {
-		gameStore.spin();
+		gameLoop.startSpin();
 	}
 
 	function handleBetChange(event: Event) {
 		const target = event.target as HTMLInputElement;
 		const newBet = parseInt(target.value) || 1;
 		gameStore.setBet(newBet);
-	}
-
-	function handleReset() {
-		gameStore.reset();
 	}
 
 	function increaseBet() {
@@ -52,7 +54,7 @@
 			</div>
 			<div class="stat">
 				<span class="label">Spins</span>
-				<span class="value">{gameState.spinCount}</span>
+				<span class="value">{gameLoopState.spinCount}</span>
 			</div>
 		</div>
 	</header>
@@ -62,7 +64,7 @@
 			<Reel 
 				symbols={reel.symbols}
 				isSpinning={reel.isSpinning}
-				position={reel.position}
+				
 				reelIndex={index}
 			/>
 		{/each}
@@ -75,7 +77,7 @@
 				<button 
 					class="bet-btn" 
 					on:click={decreaseBet}
-					disabled={gameState.bet <= GAME_CONFIG.minBet || gameState.isSpinning}
+					disabled={gameState.bet <= GAME_CONFIG.minBet || gameLoopState.isRunning}
 				>
 					−
 				</button>
@@ -86,13 +88,13 @@
 					max={GAME_CONFIG.maxBet}
 					value={gameState.bet}
 					on:input={handleBetChange}
-					disabled={gameState.isSpinning}
+					disabled={gameLoopState.isRunning}
 					class="bet-input"
 				/>
 				<button 
 					class="bet-btn" 
 					on:click={increaseBet}
-					disabled={gameState.bet >= GAME_CONFIG.maxBet || gameState.isSpinning}
+					disabled={gameState.bet >= GAME_CONFIG.maxBet || gameLoopState.isRunning}
 				>
 					+
 				</button>
@@ -103,12 +105,9 @@
 			<button
 				class="spin-btn"
 				on:click={handleSpin}
-				disabled={gameState.isSpinning || gameState.balance < gameState.bet}
+				disabled={gameLoopState.isRunning || gameState.balance < gameState.bet}
 			>
-				{gameState.isSpinning ? 'Spinning...' : 'SPIN'}
-			</button>
-			<button class="reset-btn" on:click={handleReset}>
-				Reset
+				{gameLoopState.isRunning ? 'Spinning...' : 'SPIN'}
 			</button>
 		</div>
 	</div>
@@ -297,22 +296,7 @@
 		cursor: not-allowed;
 	}
 
-	.reset-btn {
-		padding: 10px 15px;
-		font-size: 0.9rem;
-		font-weight: 500;
-		background: #fff;
-		color: #000;
-		border: 1px solid #000;
-		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.2s;
-	}
 
-	.reset-btn:hover {
-		background: #000;
-		color: #fff;
-	}
 
 	.win-notification {
 		text-align: center;
@@ -414,7 +398,7 @@
 			width: 100%;
 		}
 
-		.spin-btn, .reset-btn {
+		.spin-btn {
 			width: 100%;
 		}
 

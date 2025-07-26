@@ -76,8 +76,10 @@ function createGameStore() {
 	}
 
 	function spin() {
+		console.log('🎰 GAME STORE: spin() called at', new Date().toLocaleTimeString());
+		
 		update(state => {
-			if (state.isSpinning || state.balance < state.bet) return state;
+			if (state.balance < state.bet) return state;
 			
 			return {
 				...state,
@@ -88,38 +90,55 @@ function createGameStore() {
 			};
 		});
 
-		// Start spinning reels - each reel will handle its own symbol generation and timing
-		// This ensures all reels follow the same blueprint as reel 1
-		reels.update(currentReels => {
-			return currentReels.map((reel, index) => ({
-				...reel,
-				isSpinning: true
-				// Each reel generates its own new symbols when it starts spinning
-			}));
-		});
+		// Start all reels spinning with cascading delays
+		for (let index = 0; index < GAME_CONFIG.reels; index++) {
+			setTimeout(() => {
+				console.log(`🎰 GAME STORE: Starting reel ${index + 1}`);
+				reels.update(currentReels => {
+					const updatedReels = [...currentReels];
+					updatedReels[index] = {
+						...updatedReels[index],
+						isSpinning: true
+					};
+					return updatedReels;
+				});
+			}, index * 500); // 500ms delay between each reel
+		}
 
-		// Simulate reel spinning with delays
+		// Stop all reels after 8 seconds with cascading delays
 		setTimeout(() => {
-			reels.update(currentReels => {
-				return currentReels.map((reel, index) => ({
-					...reel,
-					isSpinning: false,
-					position: Math.floor(Math.random() * reel.symbols.length)
-				}));
-			});
+			console.log('🎰 GAME STORE: Stopping reels');
+			for (let index = 0; index < GAME_CONFIG.reels; index++) {
+				setTimeout(() => {
+					console.log(`🎰 GAME STORE: Stopping reel ${index + 1}`);
+					reels.update(currentReels => {
+						const updatedReels = [...currentReels];
+						updatedReels[index] = {
+							...updatedReels[index],
+							isSpinning: false
+						};
+						return updatedReels;
+					});
 
-			// Check for wins
-			const wins = checkWinningLines();
-			const totalWin = wins.reduce((sum, win) => sum + win.amount, 0);
+					// Check for wins after the last reel stops
+					if (index === GAME_CONFIG.reels - 1) {
+						setTimeout(() => {
+							const wins = checkWinningLines();
+							const totalWin = wins.reduce((sum, win) => sum + win.amount, 0);
 
-			update(state => ({
-				...state,
-				isSpinning: false,
-				winAmount: totalWin,
-				lastWin: totalWin,
-				balance: state.balance + totalWin
-			}));
-		}, 8000);
+							console.log('🎰 GAME STORE: Spin cycle completed');
+							update(state => ({
+								...state,
+								isSpinning: false,
+								winAmount: totalWin,
+								lastWin: totalWin,
+								balance: state.balance + totalWin
+							}));
+						}, 100);
+					}
+				}, index * 500); // 500ms delay between each reel stopping
+			}
+		}, 8000); // 8 seconds total spin duration
 	}
 
 	function setBet(amount: number) {

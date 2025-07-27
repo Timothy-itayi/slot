@@ -1,0 +1,9 @@
+# Cursor IDE
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node modules (if any in root)
+node_modules/ 

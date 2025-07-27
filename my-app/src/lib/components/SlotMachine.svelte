@@ -578,7 +578,7 @@
 		}
 
 		.game-stats {
-			flex-direction: column;
+			flex-direction: row;
 			align-items: center;
 			gap: 8px;
 		}
@@ -588,9 +588,10 @@
 		}
 
 		.reels-container {
-			flex-direction: column;
-			align-items: center;
+			flex-direction: row;
+			justify-content: center;
 			gap: 4px;
+			flex-wrap: wrap;
 		}
 
 		.bet-controls {

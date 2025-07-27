@@ -85,8 +85,8 @@
 		gameStore.setBet(gameState.bet - 1);
 	}
 
-	function handleArrayUpdate(event: CustomEvent) {
-		const { reelIndex, array } = event.detail;
+	function handleArrayUpdate(data: { reelIndex: number; array: Symbol[]; length: number; originalLength: number }) {
+		const { reelIndex, array } = data;
 		reelArrays[reelIndex] = array;
 		reelIndexes[reelIndex] = reelIndex;
 		reelArrays = [...reelArrays]; // Trigger reactivity
@@ -96,8 +96,7 @@
 		gameStore.updateReelData(reelIndex, array, 0); // We'll update position separately
 	}
 
-	function handleDebugUpdate(event: CustomEvent) {
-		const debugData = event.detail;
+	function handleDebugUpdate(debugData: any) {
 		const existingIndex = debugInfo.findIndex(info => info.reelIndex === debugData.reelIndex);
 		
 		if (existingIndex >= 0) {
@@ -109,8 +108,8 @@
 		debugInfo = [...debugInfo]; // Trigger reactivity
 	}
 
-	function handlePositionUpdate(event: CustomEvent) {
-		const { reelIndex, position } = event.detail;
+	function handlePositionUpdate(data: { reelIndex: number; position: number }) {
+		const { reelIndex, position } = data;
 		
 		// Update game store with current position
 		if (reelArrays[reelIndex]) {
@@ -118,8 +117,8 @@
 		}
 	}
 
-	function handleDebuggerVisibility(event: CustomEvent) {
-		debuggerVisible = event.detail.isVisible;
+	function handleDebuggerVisibility(data: { isVisible: boolean }) {
+		debuggerVisible = data.isVisible;
 	}
 </script>
 
@@ -153,9 +152,9 @@
 				isSpinning={reel.isSpinning}
 				reelIndex={index}
 				winningSymbols={Array.from(winningSymbols)}
-				on:arrayUpdate={handleArrayUpdate}
-				on:debugUpdate={handleDebugUpdate}
-				on:positionUpdate={handlePositionUpdate}
+				onArrayUpdate={handleArrayUpdate}
+				onDebugUpdate={handleDebugUpdate}
+				onPositionUpdate={handlePositionUpdate}
 			/>
 		{/each}
 		
@@ -166,7 +165,7 @@
 				reelIndexes={reelIndexes}
 				debugInfo={debugInfo}
 				isVisible={debuggerVisible}
-				on:visibilityChanged={handleDebuggerVisibility}
+				onVisibilityChanged={handleDebuggerVisibility}
 			/>
 		</div>
 	</div>
@@ -230,10 +229,20 @@
 	<WinCelebration 
 		wins={gameState.lastWins} 
 		isVisible={gameState.winAmount > 0}
-		on:close={() => {
+		onClose={() => {
 			gameStore.clearWins();
 		}}
 	/>
+
+	<!-- Debug info for win celebration -->
+	{#if gameState.winAmount > 0}
+		<div style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 9999;">
+			Debug: Win detected!<br>
+			Win Amount: ${gameState.winAmount}<br>
+			Last Wins Count: {gameState.lastWins.length}<br>
+			Wins: {JSON.stringify(gameState.lastWins.map((w: any) => `${w.matchCount}× ${w.symbol.emoji} (${w.winType})`))}
+		</div>
+	{/if}
 
 	<div class="paytable">
 		<h3>Paytable</h3>

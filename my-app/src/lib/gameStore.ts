@@ -145,21 +145,22 @@ function createGameStore() {
 			const symbolsAtLevel = visibleSymbols.map(reel => reel[level]);
 			const firstSymbol = symbolsAtLevel[0];
 			
-			// Check if all symbols at this level are the same
-			const isWinningLevel = symbolsAtLevel.every(symbol => symbol.id === firstSymbol.id);
+			// Count how many symbols match the first symbol at this level
+			const matchingCount = symbolsAtLevel.filter(symbol => symbol.id === firstSymbol.id).length;
 			
-			if (isWinningLevel) {
-				console.log(`🎰 HORIZONTAL WIN at level ${level}: ${firstSymbol.emoji} (${firstSymbol.name})`);
-				// Calculate prize: symbol value * number of reels * bonus multiplier
-				const prizeAmount = firstSymbol.value * GAME_CONFIG.reels * 2; // 2x bonus for horizontal match
+			// Check if 2 or more symbols match at this level
+			if (matchingCount >= 2) {
+				console.log(`🎰 HORIZONTAL WIN at level ${level}: ${matchingCount}× ${firstSymbol.emoji} (${firstSymbol.name})`);
+				// Calculate prize: symbol value * matching count * bonus multiplier
+				const prizeAmount = firstSymbol.value * matchingCount * 2; // 2x bonus for horizontal match
 				
 				results.push({
-					payLine: { positions: [], multiplier: GAME_CONFIG.reels * 2 },
+					payLine: { positions: [], multiplier: matchingCount * 2 },
 					symbol: firstSymbol,
-					multiplier: GAME_CONFIG.reels * 2,
+					multiplier: matchingCount * 2,
 					amount: prizeAmount,
 					reelIndex: -1, // -1 indicates horizontal win (not reel-specific)
-					matchCount: GAME_CONFIG.reels,
+					matchCount: matchingCount,
 					winType: 'horizontal' // Add win type for display
 				});
 			}

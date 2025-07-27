@@ -1,15 +1,18 @@
 <script lang="ts">
-	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { gsap } from 'gsap';
 	import type { Symbol } from '../types.js';
-	import { GAME_CONFIG, SYMBOLS } from '../config.js';
+	
 
 	export let symbols: Symbol[] = [];
 	export let isSpinning = false;
 	export let reelIndex = 0;
 	export let winningSymbols: string[] = [];
-
-	const dispatch = createEventDispatcher();
+	
+	// Callback props for events
+	export let onArrayUpdate: (data: { reelIndex: number; array: Symbol[]; length: number; originalLength: number }) => void;
+	export let onDebugUpdate: (data: any) => void;
+	export let onPositionUpdate: (data: { reelIndex: number; position: number }) => void;
 
 	// Simple array-based reel system
 	let container: HTMLElement;
@@ -114,9 +117,9 @@
 	// Don't kill animation when isSpinning becomes false - let it complete naturally
 	// The game store will handle stopping the reels at the right time
 
-	// Dispatch array data for debugger
+	// Call array update callback for debugger
 	$: if (reelArray.length > 0) {
-		dispatch('arrayUpdate', {
+		onArrayUpdate({
 			reelIndex,
 			array: reelArray,
 			length: reelArray.length,
@@ -124,9 +127,9 @@
 		});
 	}
 
-	// Dispatch debug info for debugger
+	// Call debug update callback for debugger
 	$: {
-		dispatch('debugUpdate', {
+		onDebugUpdate({
 			reelIndex,
 			isSpinning,
 			spinCount,
@@ -136,8 +139,8 @@
 			currentPosition
 		});
 		
-		// Also dispatch position updates for win detection
-		dispatch('positionUpdate', {
+		// Also call position update callback for win detection
+		onPositionUpdate({
 			reelIndex,
 			position: currentPosition
 		});

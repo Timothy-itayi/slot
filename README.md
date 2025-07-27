@@ -116,9 +116,7 @@ npm run dev
 
 ## Testing
 
-```bash
-npm run test:all
-```
+🧪 **65+ comprehensive tests** covering game logic, state management, configuration validation, and TypeScript types using Vitest.
 
 ## Build
 

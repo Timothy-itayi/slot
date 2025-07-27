@@ -10,7 +10,7 @@
 	import type { ReelState, Symbol } from '../types.js';
 	import '../styles/components/SlotMachine.css';
 	import { gsap } from 'gsap';
-	import { onMount } from 'svelte';
+
 
 	let reels: ReelState[] = [];
 	let gameState: any = {};

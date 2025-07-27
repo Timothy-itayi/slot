@@ -33,10 +33,18 @@
 						rel="noopener noreferrer"
 						class="portfolio-link"
 					>
-						<img src="/images/icon.png" alt="Visit My Portfolio" class="portfolio-image">
+						<img src="/images/icon.png" alt="Visit my portfolio" class="portfolio-image">
+					</a>
+					<a 
+						href="https://github.com/timothyitayi/spincycle-slot" 
+						target="_blank" 
+						rel="noopener noreferrer"
+						class="github-link"
+						style="margin-left: 1rem;"
+					>
+						<img src="/images/puzzle.png" alt="View on GitHub" class="github-image" style="width:32px;height:32px;">
 					</a>
 				</div>
-				
 		
 			</div>
 		</div>

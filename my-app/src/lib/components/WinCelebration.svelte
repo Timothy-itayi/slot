@@ -1,190 +1,128 @@
 <script lang="ts">
-	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
-	import { gsap } from 'gsap';
+	import { onMount, onDestroy } from 'svelte';
 	import type { WinResult } from '../types.js';
 
 	export let wins: WinResult[] = [];
 	export let isVisible = false;
-
-	const dispatch = createEventDispatcher();
+	export let onClose: () => void;
 
 	function closeCelebration() {
-		dispatch('close');
+		onClose();
 	}
 
-	let container: HTMLElement;
-	let celebrationElements: HTMLElement[] = [];
+	function getTotalWinAmount(): number {
+		return wins.reduce((sum, win) => sum + win.amount, 0);
+	}
 
-	// Animation timeline
-	let tl: gsap.core.Timeline;
+	function getWinTypeIcon(winType: string | undefined): string {
+		switch (winType) {
+			case 'horizontal':
+				return '→';
+			case 'reel':
+				return '↓';
+			default:
+				return '✨';
+		}
+	}
 
-	// Watch for wins and trigger celebration
-	$: if (wins.length > 0 && isVisible) {
-		// Initialize celebrationElements array with the correct size
-		celebrationElements = new Array(wins.length);
+	function getWinColor(index: number): string {
+		const colors = [
+			'#ff6b9d', // Pink
+			'#6b73ff', // Purple
+			'#00d4aa', // Teal  
+			'#ff9500', // Orange
+			'#ff3333', // Red
+			'#33ff88', // Green
+			'#ffdd00', // Yellow
+			'#8b5cf6'  // Violet
+		];
+		return colors[index % colors.length];
+	}
+
+	let autoCloseTimeout: number;
+
+	// Handle visibility changes
+	$: if (isVisible && wins.length > 0) {
+		// Clear previous timeout
+		if (autoCloseTimeout) {
+			clearTimeout(autoCloseTimeout);
+		}
 		
-		// Wait for DOM to update, then start celebration
-		setTimeout(() => {
-			startCelebration();
-		}, 50);
-		
-		// Auto-dismiss after 5 seconds
-		setTimeout(() => {
+		// Auto-close after 5 seconds
+		autoCloseTimeout = setTimeout(() => {
 			if (isVisible) {
 				closeCelebration();
 			}
 		}, 5000);
 	}
 
-	function startCelebration() {
-		if (tl) {
-			tl.kill();
-		}
-
-		// Wait for next tick to ensure DOM elements are rendered
-		setTimeout(() => {
-			// Filter out any undefined elements
-			let validElements = celebrationElements.filter(el => el);
-			
-			// Fallback: if binding failed, get elements directly from DOM
-			if (validElements.length === 0 && container) {
-				validElements = Array.from(container.querySelectorAll('.win-item'));
-				console.log('🎉 WIN CELEBRATION: Using fallback DOM query, found', validElements.length, 'elements');
-			}
-			
-			if (validElements.length === 0) {
-				console.log('🎉 WIN CELEBRATION: No valid elements to animate');
-				return;
-			}
-
-			console.log(`🎉 WIN CELEBRATION: Starting animation with ${validElements.length} elements`);
-
-			tl = gsap.timeline();
-
-			// Initial setup - hide all elements
-			gsap.set(validElements, { 
-				opacity: 0, 
-				scale: 0.5, 
-				y: 50 
-			});
-
-			// Stagger in the celebration elements
-			tl.to(validElements, {
-				opacity: 1,
-				scale: 1,
-				y: 0,
-				duration: 0.6,
-				stagger: 0.1,
-				ease: "back.out(1.7)"
-			});
-
-			// Add some bounce and sparkle effects
-			tl.to(validElements, {
-				scale: 1.05,
-				duration: 0.2,
-				yoyo: true,
-				repeat: 2,
-				ease: "power2.inOut"
-			}, "-=0.3");
-
-			// Continuous subtle animation
-			tl.to(validElements, {
-				y: -5,
-				duration: 1,
-				yoyo: true,
-				repeat: -1,
-				ease: "power2.inOut"
-			}, "-=0.5");
-		}, 100); // Small delay to ensure DOM is ready
-	}
-
-	function getWinTypeLabel(win: WinResult): string {
-		switch (win.winType) {
-			case 'reel':
-				return `Reel ${(win.reelIndex || 0) + 1} Match`;
-			case 'horizontal':
-				return 'Horizontal Match ✨';
-			default:
-				return 'Win';
-		}
-	}
-
-	function getWinTypeColor(win: WinResult): string {
-		switch (win.winType) {
-			case 'reel':
-				return '#ff6b35';
-			case 'horizontal':
-				return '#9c27b0';
-			default:
-				return '#000';
-		}
-	}
-
-	function getWinDescription(win: WinResult): string {
-		switch (win.winType) {
-			case 'reel':
-				return `${win.matchCount}× ${win.symbol.name}`;
-			case 'horizontal':
-				return `${win.symbol.name} across all reels`;
-			default:
-				return win.symbol.name;
-		}
-	}
+	onMount(() => {
+		console.log('WinCelebration mounted');
+	});
 
 	onDestroy(() => {
-		if (tl) {
-			tl.kill();
+		if (autoCloseTimeout) {
+			clearTimeout(autoCloseTimeout);
 		}
 	});
 </script>
 
 {#if isVisible && wins.length > 0}
-	<div class="celebration-overlay" bind:this={container}>
-		<div class="celebration-container">
-			<button class="close-button" on:click={closeCelebration}>✕</button>
-			<div class="celebration-header">
-				<h2 class="celebration-title">🎉 WINNER! 🎉</h2>
-				<div class="total-win">Total Win: ${wins.reduce((sum, win) => sum + win.amount, 0)}</div>
-			</div>
-
-			<div class="wins-list">
-				{#each wins as win, index}
-					<div 
-						class="win-item"
-						style="border-left-color: {getWinTypeColor(win)}"
-						bind:this={celebrationElements[index]}
-					>
-						<div class="win-header">
-							<span class="win-type" style="color: {getWinTypeColor(win)}">
-								{getWinTypeLabel(win)}
-							</span>
-							<span class="win-amount">+${win.amount}</span>
-						</div>
-						
-						<div class="win-details">
-							<div class="win-symbol">
-								<span class="symbol-emoji">{win.symbol.emoji}</span>
-								<span class="symbol-name">{win.symbol.name}</span>
-							</div>
-							<div class="win-description">
-								{getWinDescription(win)}
-							</div>
-							{#if win.multiplier > 1}
-								<div class="win-multiplier">
-									{win.multiplier}× multiplier
-								</div>
-							{/if}
-						</div>
-					</div>
+	<div 
+		class="celebration-overlay" 
+		role="dialog" 
+		aria-modal="true"
+		aria-label="Win celebration"
+		on:click={closeCelebration} 
+		on:keydown={(e) => e.key === 'Escape' && closeCelebration()}
+		tabindex="0"
+	>
+		<div class="celebration-card" on:click|stopPropagation style="--win-count: {wins.length}">
+			<!-- Simple confetti background -->
+			<div class="confetti-background">
+				{#each Array(20) as _, i}
+					<div class="confetti-piece" style="--delay: {i * 0.1}s; --left: {Math.random() * 100}%; --color: {['#ff6b9d', '#6b73ff', '#00d4aa', '#ff9500', '#ffdd00'][Math.floor(Math.random() * 5)]}"></div>
 				{/each}
 			</div>
+			
+			<!-- Close Button -->
+			<button class="close-btn" on:click={closeCelebration}>×</button>
 
-			<div class="celebration-footer">
-				<div class="sparkles">
-					<span>✨</span>
-					<span>🎰</span>
-					<span>✨</span>
+			<!-- Win Content -->
+			<div class="win-content">
+				<h2 class="win-title">
+					{#if wins.some(win => win.winType === 'horizontal' && (win.matchCount || 0) >= 3)}
+						🎯 JACKPOT!
+					{:else if wins.some(win => win.winType === 'horizontal')}
+						✨ BIG WIN!
+					{:else}
+						🎉 WIN!
+					{/if}
+				</h2>
+
+				<div class="total-amount">${getTotalWinAmount()}</div>
+
+				<!-- Show all wins with bright colors -->
+				<div class="wins-container">
+					{#each wins as win, index}
+						<div class="win-detail" style="--win-color: {getWinColor(index)}">
+							<span class="win-icon">{win.symbol.emoji}</span>
+							<div class="win-info">
+								<span class="win-desc">
+									{win.matchCount}× {win.symbol.name}
+								</span>
+								<span class="win-amount">${win.amount}</span>
+								<span class="win-type-badge">
+									{getWinTypeIcon(win.winType)} {win.winType}
+								</span>
+							</div>
+						</div>
+					{/each}
 				</div>
+
+				{#if wins.some(win => win.winType === 'horizontal')}
+					<div class="bonus-text">2× Horizontal Bonus!</div>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -197,217 +135,299 @@
 		left: 0;
 		width: 100%;
 		height: 100%;
-		background: rgba(0, 0, 0, 0.8);
+		background: rgba(0, 0, 0, 0.7);
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		z-index: 2000;
-		backdrop-filter: blur(4px);
+		backdrop-filter: blur(8px);
+		animation: fadeIn 0.3s ease-out;
 	}
 
-	.celebration-container {
-		background: #fff;
-		border-radius: 16px;
-		padding: 30px;
-		max-width: 500px;
-		width: 90%;
-		max-height: 80vh;
-		overflow-y: auto;
-		box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-		border: 3px solid #ffd700;
+	@keyframes fadeIn {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+
+	.celebration-card {
+		background: linear-gradient(135deg, 
+			#ff6b9d 0%, 
+			#c44fdb 25%, 
+			#6b73ff 50%, 
+			#00d4aa 75%, 
+			#ff9500 100%
+		);
+		border-radius: 20px;
+		padding: 1.25rem;
+		/* Dynamic width - more responsive scaling */
+		width: calc(340px + (var(--win-count, 1) - 1) * 60px);
+		max-width: 95vw;
+		/* Remove fixed height - let content determine height */
+		min-height: fit-content;
+		box-shadow: 
+			0 20px 40px rgba(255, 107, 157, 0.3),
+			0 0 0 2px rgba(255, 255, 255, 0.9),
+			0 0 0 4px rgba(255, 107, 157, 0.2);
 		position: relative;
-	}
-
-	.close-button {
-		position: absolute;
-		top: 15px;
-		right: 15px;
-		width: 30px;
-		height: 30px;
-		border-radius: 50%;
-		background: #ff6b35;
-		color: #fff;
-		border: none;
-		font-size: 1.2rem;
-		font-weight: bold;
-		cursor: pointer;
-		transition: all 0.2s;
-		z-index: 10;
-	}
-
-	.close-button:hover {
-		background: #e55a2b;
-		transform: scale(1.1);
-	}
-
-	.celebration-header {
 		text-align: center;
-		margin-bottom: 25px;
+		animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+		overflow: hidden;
 	}
 
-	.celebration-title {
-		font-size: 2rem;
-		font-weight: bold;
-		color: #000;
-		margin: 0 0 10px 0;
-		text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+	@keyframes slideUp {
+		from {
+			transform: translateY(20px) scale(0.95);
+			opacity: 0;
+		}
+		to {
+			transform: translateY(0) scale(1);
+			opacity: 1;
+		}
 	}
 
-	.total-win {
-		font-size: 1.5rem;
-		font-weight: bold;
-		color: #ff6b35;
-		background: linear-gradient(45deg, #ff6b35, #f7931e);
+	.confetti-background {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+		overflow: hidden;
+	}
+
+	.confetti-piece {
+		position: absolute;
+		width: 8px;
+		height: 8px;
+		background: var(--color);
+		border-radius: 50%;
+		left: var(--left);
+		top: -10px;
+		animation: confetti-fall 3s linear infinite;
+		animation-delay: var(--delay);
+	}
+
+	@keyframes confetti-fall {
+		to {
+			transform: translateY(100vh) rotate(360deg);
+			opacity: 0;
+		}
+	}
+
+	.close-btn {
+		position: absolute;
+		top: 1rem;
+		right: 1rem;
+		width: 36px;
+		height: 36px;
+		border: 2px solid rgba(255, 255, 255, 0.8);
+		background: rgba(255, 255, 255, 0.9);
+		color: #ff6b9d;
+		border-radius: 50%;
+		font-size: 1.25rem;
+		font-weight: 700;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 10;
+		backdrop-filter: blur(10px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+
+	.close-btn:hover {
+		background: #ff6b9d;
+		color: white;
+		transform: scale(1.1);
+		box-shadow: 0 6px 20px rgba(255, 107, 157, 0.4);
+	}
+
+	.win-content {
+		margin-top: 0.5rem;
+		position: relative;
+		z-index: 5;
+		background: rgba(255, 255, 255, 0.95);
+		border-radius: 12px;
+		padding: 1rem;
+		backdrop-filter: blur(10px);
+		box-shadow: 
+			0 4px 20px rgba(0, 0, 0, 0.08),
+			inset 0 1px 0 rgba(255, 255, 255, 0.8);
+	}
+
+	.win-title {
+		font-size: 1.25rem;
+		font-weight: 800;
+		background: linear-gradient(135deg, #ff6b9d, #c44fdb, #6b73ff);
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
 		background-clip: text;
+		margin: 0 0 0.5rem 0;
+		letter-spacing: 0.5px;
+		text-shadow: 0 2px 4px rgba(255, 255, 255, 0.8);
 	}
 
-	.wins-list {
+	.total-amount {
+		font-size: 1.75rem;
+		font-weight: 900;
+		color: #059669;
+		margin-bottom: 0.75rem;
+		text-shadow: 
+			0 2px 4px rgba(5, 150, 105, 0.2),
+			0 0 8px rgba(255, 255, 255, 0.8);
+	}
+
+	.wins-container {
 		display: flex;
 		flex-direction: column;
-		gap: 15px;
-		margin-bottom: 20px;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+		/* Remove scrolling - show all wins */
 	}
 
-	.win-item {
-		background: #f8f8f8;
-		border-radius: 12px;
-		padding: 15px;
-		border-left: 4px solid;
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-		transition: all 0.3s ease;
-	}
-
-	.win-item:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-	}
-
-	.win-header {
+	.win-detail {
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 10px;
+		gap: 0.75rem;
+		padding: 0.75rem;
+		background: rgba(255, 255, 255, 0.9);
+		border-radius: 12px;
+		border: 2px solid var(--win-color);
+		box-shadow: 
+			0 2px 8px rgba(0, 0, 0, 0.06),
+			0 0 0 1px rgba(255, 255, 255, 0.8);
+		animation: winPulse 0.6s ease-out;
 	}
 
-	.win-type {
-		font-weight: bold;
-		font-size: 0.9rem;
-		text-transform: uppercase;
-		letter-spacing: 0.5px;
+	@keyframes winPulse {
+		0% {
+			transform: scale(0.95);
+			opacity: 0;
+		}
+		50% {
+			transform: scale(1.02);
+		}
+		100% {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+
+	.win-icon {
+		font-size: 1.5rem;
+		filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.15));
+		flex-shrink: 0;
+	}
+
+	.win-info {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		gap: 0.125rem;
+		min-width: 0; /* Allow text truncation */
+	}
+
+	.win-desc {
+		font-weight: 600;
+		color: #1e293b;
+		font-size: 0.875rem;
+		line-height: 1.3;
 	}
 
 	.win-amount {
-		font-size: 1.2rem;
-		font-weight: bold;
-		color: #000;
-	}
-
-	.win-details {
-		display: flex;
-		flex-direction: column;
-		gap: 5px;
-	}
-
-	.win-symbol {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-	}
-
-	.symbol-emoji {
-		font-size: 1.5rem;
-	}
-
-	.symbol-name {
-		font-weight: bold;
-		color: #000;
+		font-weight: 800;
+		color: var(--win-color);
 		font-size: 1rem;
+		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 	}
 
-	.win-description {
-		color: #666;
-		font-size: 0.85rem;
-	}
-
-	.win-multiplier {
-		color: #ff6b35;
-		font-weight: bold;
-		font-size: 0.8rem;
-		background: #fff3e0;
-		padding: 2px 6px;
-		border-radius: 4px;
+	.win-type-badge {
+		font-size: 0.625rem;
+		font-weight: 600;
+		color: var(--win-color);
+		text-transform: uppercase;
+		letter-spacing: 0.5px;
+		background: rgba(255, 255, 255, 0.8);
+		padding: 0.125rem 0.375rem;
+		border-radius: 6px;
+		border: 1px solid var(--win-color);
 		display: inline-block;
+		width: fit-content;
 	}
 
-	.celebration-footer {
-		text-align: center;
-		margin-top: 20px;
+	.bonus-text {
+		background: linear-gradient(135deg, #fbbf24, #f59e0b);
+		color: white;
+		padding: 0.375rem 0.75rem;
+		border-radius: 8px;
+		font-size: 0.75rem;
+		font-weight: 700;
+		text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+		box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+		animation: pulse 2s infinite;
+		margin-top: 0.25rem;
 	}
 
-	.sparkles {
-		display: flex;
-		justify-content: center;
-		gap: 15px;
-		font-size: 1.5rem;
-	}
-
-	.sparkles span {
-		animation: sparkle 2s ease-in-out infinite;
-	}
-
-	.sparkles span:nth-child(2) {
-		animation-delay: 0.5s;
-	}
-
-	.sparkles span:nth-child(3) {
-		animation-delay: 1s;
-	}
-
-	@keyframes sparkle {
-		0%, 100% { 
-			transform: scale(1) rotate(0deg); 
-			opacity: 1;
+	@keyframes pulse {
+		0%, 100% {
+			transform: scale(1);
 		}
-		50% { 
-			transform: scale(1.2) rotate(180deg); 
-			opacity: 0.8;
-		}
-	}
-
-	@media (max-width: 768px) {
-		.celebration-container {
-			padding: 20px;
-			margin: 20px;
-		}
-
-		.celebration-title {
-			font-size: 1.5rem;
-		}
-
-		.total-win {
-			font-size: 1.2rem;
-		}
-
-		.win-header {
-			flex-direction: column;
-			align-items: flex-start;
-			gap: 5px;
+		50% {
+			transform: scale(1.05);
 		}
 	}
 
 	@media (max-width: 480px) {
-		.celebration-container {
-			padding: 15px;
+		.celebration-card {
+			/* Mobile dynamic sizing - even more compact */
+			width: calc(300px + (var(--win-count, 1) - 1) * 30px);
+			max-width: 95vw;
+			padding: 1rem;
 		}
 
-		.celebration-title {
-			font-size: 1.3rem;
+		.win-content {
+			padding: 0.75rem;
 		}
 
-		.win-item {
-			padding: 12px;
+		.win-title {
+			font-size: 1.125rem;
+		}
+
+		.total-amount {
+			font-size: 1.5rem;
+		}
+
+		.wins-container {
+			gap: 0.375rem;
+		}
+
+		.win-detail {
+			gap: 0.5rem;
+			padding: 0.5rem;
+		}
+
+		.win-icon {
+			font-size: 1.25rem;
+		}
+
+		.win-desc {
+			font-size: 0.8125rem;
+		}
+
+		.win-amount {
+			font-size: 0.9375rem;
+		}
+
+		.win-type-badge {
+			font-size: 0.5625rem;
+			padding: 0.125rem 0.25rem;
+		}
+
+		.close-btn {
+			width: 32px;
+			height: 32px;
+			font-size: 1rem;
 		}
 	}
 </style> 

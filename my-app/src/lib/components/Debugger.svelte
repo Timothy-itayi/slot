@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import type { Symbol } from '../types.js';
 	import { GAME_CONFIG } from '../config.js';
 
@@ -7,8 +6,7 @@
 	export let reelIndexes: number[] = [];
 	export let isVisible = false;
 	export let debugInfo: any[] = [];
-
-	const dispatch = createEventDispatcher();
+	export let onVisibilityChanged: (data: { isVisible: boolean }) => void; // Callback prop
 
 	// Store current positions and indices to prevent reset
 	let currentPositions: number[] = [];
@@ -16,7 +14,7 @@
 
 	function toggleVisibility() {
 		isVisible = !isVisible;
-		dispatch('visibilityChanged', { isVisible });
+		onVisibilityChanged({ isVisible }); // Call callback prop directly
 	}
 
 	function getDebugInfo(reelIndex: number) {

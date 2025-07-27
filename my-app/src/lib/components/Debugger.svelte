@@ -79,7 +79,7 @@
 
 <div class="debugger-container">
 	<button class="debug-toggle" on:click={toggleVisibility}>
-		{isVisible ? '🔽 Hide Debug' : '🔼 Show Debug'}
+		{isVisible ? ' Hide Debug' : ' Show Debug'}
 	</button>
 
 	{#if isVisible}

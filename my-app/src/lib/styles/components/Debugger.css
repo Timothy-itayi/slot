@@ -1,27 +1,27 @@
 .debugger-container {
 	position: fixed;
-	bottom: 60px;
-	left: 60px;
+	bottom: 0px;
+	left: 0px;
 	z-index: 1000;
 	font-family: monospace;
 }
 
 .debug-toggle {
-	background: #333;
-	color: white;
+	background: transparent;
+	color: rgb(0, 0, 0);
 	border: none;
 	padding: 10px 15px;
 	border-radius: 5px;
 	cursor: pointer;
 	font-size: 14px;
 	font-weight: bold;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+	box-shadow: 3px 1px 13px rgba(0, 0, 0, 0.3);
 	z-index: 1001;
 	position: relative;
 }
 
 .debug-toggle:hover {
-	background: #555;
+	background: transparent;
 }
 
 /* Debug Layout */
@@ -30,27 +30,27 @@
 	top: 0;
 	left: 0;
 	right: 0;
-	bottom: 60%;
+	bottom: 0;
 	pointer-events: none;
 	z-index: 50;
 	display: flex;
 	align-items: flex-start;
 	justify-content: center;
-	padding: 140px 20px 20px 20px;
+	padding: 20px;
 }
 
 /* Info Box - Positioned to the right */
 .info-box {
-	background: rgba(0, 0, 0, 0.9);
+	background: rgba(0, 0, 0, 0.85);
 	color: white;
-	padding: 60px;
+	padding: 20px;
 	border-radius: 8px;
 	max-width: 350px;
 	pointer-events: auto;
-	border: 2px solid #22c55e;
-	position: absolute;
-	top: 0;
-	left: 0;
+	border: 2px solid rgba(34, 197, 94, 0.5);
+	position: fixed;
+	top: 20px;
+	right: 20px;
 }
 
 .info-box h3 {
@@ -111,12 +111,16 @@
 
 /* Reels overlay - Positioned over slot machine */
 .reels-overlay {
+	position: absolute;
 	display: flex;
 	justify-content: center;
 	gap: 11px;
-	padding-top: 190px;
-	pointer-events: auto;
+	top: 190px;
+	pointer-events: none;
 	align-self: center;
+	background: rgba(0, 0, 0, 0.4);
+	padding: 10px;
+	border-radius: 8px;
 }
 
 .reel-debug {
@@ -125,11 +129,12 @@
 	align-items: center;
 	width: 80px;
 	height: 240px;
-	border: 2px solid rgba(51, 51, 51, 0.5);
+	border: 2px solid rgba(34, 197, 94, 0.3);
 	border-radius: 8px;
-	background: rgba(255, 255, 255, 0.1);
+	background: rgba(0, 0, 0, 0.6);
 	overflow: hidden;
 	position: relative;
+	pointer-events: auto;
 }
 
 .index-display {
@@ -160,8 +165,8 @@
 /* Reel info */
 .reel-info {
 	position: absolute;
-	top: 3px;
-	right: 3px;
+	top: 2px;
+	right: 0px;
 	background: rgba(0, 0, 0, 0.8);
 	color: white;
 	padding: 3px 6px;
@@ -185,15 +190,15 @@
 
 	.info-box {
 		margin-left: 0;
+		left: 0px;
 		margin-bottom: 20px;
-		max-width: 500px;
+		max-width: 300px;
 	}
 }
 
 @media (max-width: 768px) {
-	.reel-debug {
-		width: 60px;
-		height: 180px;
+	.reels-overlay {
+		display: none; /* Hide the reels debug visualization on mobile */
 	}
 
 	.index-display {
@@ -206,8 +211,14 @@
 	}
 
 	.info-box {
-		max-width: 400px;
+		max-width: 300px;
 		padding: 15px;
+		position: fixed;
+		top: 0px;
+		
+		left: 36%;
+		transform: translateX(-50%);
+		width: calc(100% - 40px);
 	}
 
 	.info-box h3 {
@@ -225,32 +236,7 @@
 }
 
 @media (max-width: 480px) {
-	.reel-debug {
-		width: 50px;
-		height: 150px;
-	}
-
-	.index-display {
-		height: 37.5px;
-	}
-
-	.index-number {
-		font-size: 0.9rem;
-		padding: 2px 4px;
-	}
-
-	.reel-info {
-		font-size: 0.6rem;
-		padding: 2px 4px;
-	}
-
 	.info-box {
-		max-width: 300px;
 		padding: 12px;
-	}
-
-	.reel-status {
-		font-size: 0.75rem;
-		gap: 6px;
 	}
 } 

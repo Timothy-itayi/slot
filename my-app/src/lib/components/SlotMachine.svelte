@@ -239,9 +239,7 @@
 
 	<div class="paytable">
 		<h3>Paytable</h3>
-		<div class="prize-info">
-			<p class="prize-description">Match 3+ symbols on any reel OR the same symbol across all reels horizontally!</p>
-		</div>
+
 
 	
 		<div class="symbols-grid">

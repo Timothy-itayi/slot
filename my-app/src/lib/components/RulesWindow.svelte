@@ -16,7 +16,7 @@
 	
 	{#if isVisible}
 		<div class="rules-window">
-			<h3>🎰 Game Rules</h3>
+			<h3>🎰 How to Play</h3>
 			
 			<div class="rule-section">
 				<h4>💰 Winning Conditions</h4>
@@ -43,28 +43,8 @@
 
 			</div>
 			
-			<div class="rule-section">
-				<h4>🎯 Symbol Values</h4>
-				<div class="symbols-list">
-					{#each SYMBOLS as symbol}
-						<div class="symbol-item">
-							<span class="symbol-emoji">{symbol.emoji}</span>
-							<span class="symbol-name">{symbol.name}</span>
-							<span class="symbol-value">${symbol.value}</span>
-						</div>
-					{/each}
-				</div>
-			</div>
-			
-			<div class="rule-section">
-				<h4>🎮 How to Play</h4>
-				<ol class="instructions">
-					<li>Set your bet amount</li>
-					<li>Click SPIN to start the reels</li>
-					<li>Watch for matching symbols!</li>
-					<li>Wins are automatically calculated</li>
-				</ol>
-			</div>
+
+	
 		</div>
 	{/if}
 </div> 

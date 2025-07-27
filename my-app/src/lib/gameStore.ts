@@ -281,7 +281,7 @@ function createGameStore() {
 	function setBet(amount: number) {
 		update(state => ({
 			...state,
-			bet: Math.max(GAME_CONFIG.minBet, Math.min(GAME_CONFIG.maxBet, amount))
+			bet: Math.max(GAME_CONFIG.minBet, Math.min(state.balance, amount))
 		}));
 	}
 

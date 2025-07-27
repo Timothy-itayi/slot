@@ -1,0 +1,242 @@
+.debugger-container {
+	position: fixed;
+	bottom: 0px;
+	left: 0px;
+	z-index: 1000;
+	font-family: monospace;
+}
+
+.debug-toggle {
+	background: transparent;
+	color: rgb(0, 0, 0);
+	border: none;
+	padding: 10px 15px;
+	border-radius: 5px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: bold;
+	box-shadow: 3px 1px 13px rgba(0, 0, 0, 0.3);
+	z-index: 1001;
+	position: relative;
+}
+
+.debug-toggle:hover {
+	background: transparent;
+}
+
+/* Debug Layout */
+.debug-layout {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	pointer-events: none;
+	z-index: 50;
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding: 20px;
+}
+
+/* Info Box - Positioned to the right */
+.info-box {
+	background: rgba(0, 0, 0, 0.85);
+	color: white;
+	padding: 20px;
+	border-radius: 8px;
+	max-width: 350px;
+	pointer-events: auto;
+	border: 2px solid rgba(34, 197, 94, 0.5);
+	position: fixed;
+	top: 20px;
+	right: 20px;
+}
+
+.info-box h3 {
+	margin: 0 0 15px 0;
+	color: #22c55e;
+	font-size: 1.1rem;
+}
+
+.info-box p {
+	margin: 0 0 20px 0;
+	font-size: 0.9rem;
+	line-height: 1.4;
+	color: rgba(255, 255, 255, 0.9);
+}
+
+.spin-info h4 {
+	margin: 0 0 10px 0;
+	color: #22c55e;
+	font-size: 1rem;
+}
+
+.spin-info p {
+	margin: 0 0 15px 0;
+	font-size: 0.85rem;
+	color: rgba(255, 255, 255, 0.8);
+}
+
+.reel-status-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.reel-status {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 8px;
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 4px;
+	font-size: 0.85rem;
+}
+
+.reel-label {
+	font-weight: bold;
+	color: #22c55e;
+	min-width: 60px;
+}
+
+.status-indicator {
+	font-size: 0.9rem;
+}
+
+.spin-count {
+	color: rgba(255, 255, 255, 0.7);
+	font-size: 0.8rem;
+}
+
+/* Reels overlay - Positioned over slot machine */
+.reels-overlay {
+	position: absolute;
+	display: flex;
+	justify-content: center;
+	gap: 11px;
+	top: 190px;
+	pointer-events: none;
+	align-self: center;
+	background: rgba(0, 0, 0, 0.4);
+	padding: 10px;
+	border-radius: 8px;
+}
+
+.reel-debug {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 80px;
+	height: 240px;
+	border: 2px solid rgba(34, 197, 94, 0.3);
+	border-radius: 8px;
+	background: rgba(0, 0, 0, 0.6);
+	overflow: hidden;
+	position: relative;
+	pointer-events: auto;
+}
+
+.index-display {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 60px;
+	border-bottom: 1px solid rgba(238, 238, 238, 0.2);
+	position: relative;
+	background-color: rgb(35, 35, 35);
+}
+
+.index-display:last-child {
+	border-bottom: none;
+}
+
+.index-number {
+	font-size: 1.1rem;
+	color: rgba(255, 255, 255, 0.95);
+	background: rgba(0, 0, 0, 0.8);
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-weight: bold;
+	font-family: monospace;
+}
+
+/* Reel info */
+.reel-info {
+	position: absolute;
+	top: 2px;
+	right: 0px;
+	background: rgba(0, 0, 0, 0.8);
+	color: white;
+	padding: 3px 6px;
+	border-radius: 3px;
+	font-size: 0.7rem;
+	line-height: 1.1;
+	pointer-events: auto;
+}
+
+.info-line {
+	margin: 1px 0;
+	font-family: monospace;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+	.debug-layout {
+		flex-direction: column;
+		align-items: center;
+	}
+
+	.info-box {
+		margin-left: 0;
+		left: 0px;
+		margin-bottom: 20px;
+		max-width: 300px;
+	}
+}
+
+@media (max-width: 768px) {
+	.reels-overlay {
+		display: none; /* Hide the reels debug visualization on mobile */
+	}
+
+	.index-display {
+		height: 45px;
+	}
+
+	.index-number {
+		font-size: 1rem;
+		padding: 3px 6px;
+	}
+
+	.info-box {
+		max-width: 300px;
+		padding: 15px;
+		position: fixed;
+		top: 0px;
+		
+		left: 36%;
+		transform: translateX(-50%);
+		width: calc(100% - 40px);
+	}
+
+	.info-box h3 {
+		font-size: 1rem;
+	}
+
+	.info-box p {
+		font-size: 0.8rem;
+	}
+
+	.reel-status {
+		font-size: 0.8rem;
+		padding: 4px 6px;
+	}
+}
+
+@media (max-width: 480px) {
+	.info-box {
+		padding: 12px;
+	}
+} 

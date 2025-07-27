@@ -1,0 +1,6 @@
+/* SpinCycle Component Styles */
+@import './SlotMachine.css';
+@import './Reel.css';
+@import './WinCelebration.css';
+@import './RulesWindow.css';
+@import './Debugger.css'; 

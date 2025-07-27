@@ -58,6 +58,18 @@
 	// No need for array extension with pre-allocated large array
 	// The array is large enough for many spins without running out
 
+	// Function to get current symbol height based on screen size
+	function getSymbolHeight(): number {
+		const width = window.innerWidth;
+		if (width <= 480) {
+			return 40; // Mobile
+		} else if (width <= 768) {
+			return 50; // Tablet
+		} else {
+			return 60; // Desktop
+		}
+	}
+
 	// Simple animation function
 	function animateReel() {
 		if (!reelFrame || reelArray.length === 0) return;
@@ -73,8 +85,11 @@
 		gsap.set(reelFrame, { y: 0 });
 		currentPosition = 0;
 		
+		// Get responsive symbol height
+		const symbolHeight = getSymbolHeight();
+		console.log(`🎰 REEL ${reelIndex + 1}: Using symbol height: ${symbolHeight}px for screen width: ${window.innerWidth}px`);
+		
 		// Calculate animation distance (just slightly more than original symbols)
-		const symbolHeight = 60;
 		const setsToSpin = 1 + Math.floor(Math.random() * 2); // 1-2 sets
 		const extraSymbols = Math.floor(Math.random() * symbols.length); // 0-19 extra symbols
 		const totalDistance = (symbols.length * setsToSpin + extraSymbols) * symbolHeight;
@@ -90,21 +105,25 @@
 			duration: duration,
 			ease: "power2.out",
 			onUpdate: () => {
-				// Update current position based on animation
+				// Update current position based on animation with responsive height
 				const newY = Number(gsap.getProperty(reelFrame, "y")) || 0;
-				const symbolHeight = 60;
-				currentPosition = Math.floor(Math.abs(newY) / symbolHeight) % reelArray.length;
+				const currentSymbolHeight = getSymbolHeight();
+				currentPosition = Math.floor(Math.abs(newY) / currentSymbolHeight) % reelArray.length;
 			},
 			onComplete: () => {
 				console.log(`🎰 REEL ${reelIndex + 1}: Animation completed`);
-				// Final position update
+				// Final position update with responsive height
 				const finalY = Number(gsap.getProperty(reelFrame, "y")) || 0;
-				const symbolHeight = 60;
-				currentPosition = Math.floor(Math.abs(finalY) / symbolHeight) % reelArray.length;
+				const finalSymbolHeight = getSymbolHeight();
+				currentPosition = Math.floor(Math.abs(finalY) / finalSymbolHeight) % reelArray.length;
 				
 				// Ensure position is within bounds
 				currentPosition = currentPosition % reelArray.length;
-				console.log(`🎰 REEL ${reelIndex + 1}: Final position: ${currentPosition}`);
+				console.log(`🎰 REEL ${reelIndex + 1}: Final position: ${currentPosition} (symbol height: ${finalSymbolHeight}px)`);
+				
+				// Snap to exact position to ensure even spacing
+				const snapY = -(currentPosition * finalSymbolHeight);
+				gsap.set(reelFrame, { y: snapY });
 			}
 		});
 	}
@@ -177,10 +196,10 @@
 <style>
 	.reel-container {
 		display: flex;
-		flex-direction:column ;
+		flex-direction: column;
 		align-items: center;
 		width: 80px;
-		height: 240px;
+		height: 240px; /* 4 levels × 60px each = 240px */
 		border: 2px solid #333;
 		border-radius: 8px;
 		background: #fff;
@@ -193,6 +212,7 @@
 		display: flex;
 		flex-direction: column;
 		width: 100%;
+		height: 240px; /* Exactly 4 levels */
 		position: relative;
 		transform: translateY(0);
 	}
@@ -202,11 +222,12 @@
 		align-items: center;
 		justify-content: center;
 		width: 100%;
-		height: 60px;
+		height: 60px; /* Fixed height for exactly 4 levels */
 		font-size: 2rem;
 		border-bottom: 1px solid #eee;
 		background: #fff;
 		position: relative;
+		flex-shrink: 0; /* Prevent shrinking */
 	}
 
 	.symbol:last-child {
@@ -250,18 +271,18 @@
 		pointer-events: none;
 	}
 
-	
-
-
-
 	@media (max-width: 768px) {
 		.reel-container {
 			width: 60px;
-			height: 180px;
+			height: 200px; /* 4 levels × 50px each = 200px */
+		}
+
+		.reel-frame {
+			height: 200px; /* Match container height */
 		}
 
 		.symbol {
-			height: 60px;
+			height: 50px; /* Fixed height for exactly 4 levels */
 			font-size: 1.5rem;
 		}
 	}
@@ -269,12 +290,15 @@
 	@media (max-width: 480px) {
 		.reel-container {
 			width: 50px;
-			height: 150px;
-			
+			height: 160px; /* 4 levels × 40px each = 160px */
+		}
+
+		.reel-frame {
+			height: 160px; /* Match container height */
 		}
 
 		.symbol {
-			height: 50px;
+			height: 40px; /* Fixed height for exactly 4 levels */
 			font-size: 1.2rem;
 		}
 	}

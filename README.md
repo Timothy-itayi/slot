@@ -6,7 +6,7 @@ A modern slot machine game built with Svelte 5, TypeScript, and GSAP animations.
 
 🎮 **[Play SpinCycle Live on Vercel](https://slot-alpha.vercel.app/)**
 
-![SpinCycle Slot Machine Demo](RPReplay_Final1753612510-ezgif.com-video-to-gif-converter.gif)
+<img src="RPReplay_Final1753612510-ezgif.com-video-to-gif-converter.gif" width="300"/>
 
 ## The Journey: From Over-Engineering to Simple Solutions
 

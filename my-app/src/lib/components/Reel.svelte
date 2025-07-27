@@ -2,6 +2,7 @@
 	import { onDestroy } from 'svelte';
 	import { gsap } from 'gsap';
 	import type { Symbol } from '../types.js';
+	import '../styles/components/Reel.css';
 	
 
 	export let symbols: Symbol[] = [];
@@ -191,115 +192,4 @@
 			</div>
 		{/each}
 	</div>
-</div>
-
-<style>
-	.reel-container {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		width: 80px;
-		height: 240px; /* 4 levels × 60px each = 240px */
-		border: 2px solid #333;
-		border-radius: 8px;
-		background: #fff;
-		overflow: hidden;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-		position: relative;
-	}
-
-	.reel-frame {
-		display: flex;
-		flex-direction: column;
-		width: 100%;
-		height: 240px; /* Exactly 4 levels */
-		position: relative;
-		transform: translateY(0);
-	}
-
-	.symbol {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		width: 100%;
-		height: 60px; /* Fixed height for exactly 4 levels */
-		font-size: 2rem;
-		border-bottom: 1px solid #eee;
-		background: #fff;
-		position: relative;
-		flex-shrink: 0; /* Prevent shrinking */
-	}
-
-	.symbol:last-child {
-		border-bottom: none;
-	}
-
-	/* Highlight the center symbol when not spinning */
-	.reel-container:not(.spinning) .symbol:nth-child(2) {
-		background: #f8f8f8;
-		border-left: 3px solid #333;
-		border-right: 3px solid #333;
-	}
-
-	/* Highlight winning symbols */
-	.winning-symbol {
-		background: linear-gradient(45deg, #ffd700, #ffed4e) !important;
-		box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-		animation: winning-pulse 1s ease-in-out infinite;
-		border: 2px solid #ff6b35;
-		transform: scale(1.05);
-	}
-
-	@keyframes winning-pulse {
-		0%, 100% { 
-			box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-			transform: scale(1.05);
-		}
-		50% { 
-			box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
-			transform: scale(1.1);
-		}
-	}
-
-	/* Movement Indicator */
-	.movement-indicator {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		z-index: 100;
-		pointer-events: none;
-	}
-
-	@media (max-width: 768px) {
-		.reel-container {
-			width: 60px;
-			height: 200px; /* 4 levels × 50px each = 200px */
-		}
-
-		.reel-frame {
-			height: 200px; /* Match container height */
-		}
-
-		.symbol {
-			height: 50px; /* Fixed height for exactly 4 levels */
-			font-size: 1.5rem;
-		}
-	}
-
-	@media (max-width: 480px) {
-		.reel-container {
-			width: 50px;
-			height: 160px; /* 4 levels × 40px each = 160px */
-		}
-
-		.reel-frame {
-			height: 160px; /* Match container height */
-		}
-
-		.symbol {
-			height: 40px; /* Fixed height for exactly 4 levels */
-			font-size: 1.2rem;
-		}
-	}
-</style> 
+</div> 

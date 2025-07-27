@@ -4,10 +4,13 @@
 	import Reel from './Reel.svelte';
 	import Debugger from './Debugger.svelte';
 	import RulesWindow from './RulesWindow.svelte';
+	import AboutWindow from './AboutWindow.svelte';
 	import WinCelebration from './WinCelebration.svelte';
 	import { GAME_CONFIG, SYMBOLS } from '../config.js';
 	import type { ReelState, Symbol } from '../types.js';
 	import '../styles/components/SlotMachine.css';
+	import { gsap } from 'gsap';
+	import { onMount } from 'svelte';
 
 	let reels: ReelState[] = [];
 	let gameState: any = {};
@@ -24,6 +27,11 @@
 	
 	// Auto-reset mechanism for stuck gameLoop
 	let resetTimeout: number;
+	
+	// Particle effect variables
+	let spinButtonRef: HTMLButtonElement;
+	let particleContainer: HTMLDivElement;
+	let spinningAnimation: gsap.core.Timeline | null = null;
 
 	gameStore.subscribe(state => {
 		gameState = state;
@@ -61,15 +69,155 @@
 
 	gameLoop.subscribe(state => {
 		gameLoopState = state;
+		
+		// Handle spinning animation
+		if (state.isRunning && spinButtonRef) {
+			startSpinningAnimation();
+		} else if (spinningAnimation) {
+			stopSpinningAnimation();
+		}
 	});
 
-	function handleSpin() {
+	function handleSpin(event: MouseEvent) {
 		// Check if gameLoop is stuck and reset if needed
 		if (gameLoopState.isRunning && !gameState.isSpinning) {
 			console.log('🎰 SLOT MACHINE: Detected stuck gameLoop state, resetting...');
 			gameLoop.resetState();
 		}
+		
+		// Trigger particle effect with click position
+		createParticles(event);
+		
 		gameLoop.startSpin();
+	}
+	
+	function createParticles(event: MouseEvent) {
+		if (!spinButtonRef || !particleContainer) return;
+		
+		const buttonRect = spinButtonRef.getBoundingClientRect();
+		const containerRect = particleContainer.getBoundingClientRect();
+		
+		// Get click position relative to the button
+		const clickX = event.clientX - buttonRect.left;
+		const clickY = event.clientY - buttonRect.top;
+		
+		// Position relative to container
+		const startX = buttonRect.left + clickX - containerRect.left;
+		const startY = buttonRect.top + clickY - containerRect.top;
+		
+		// Create multiple particles
+		for (let i = 0; i < 15; i++) {
+			const particle = document.createElement('div');
+			particle.className = 'spin-particle';
+			
+			// Set random color for each particle
+			const colors = [
+				'#ff6b9d', // Pink
+				'#ff9500', // Orange
+				'#ffdd00', // Yellow
+				'#00d4aa', // Teal
+				'#6b73ff', // Blue
+				'#ff3333', // Red
+				'#33ff88', // Green
+				'#8b5cf6', // Purple
+				'#ff69b4', // Hot Pink
+				'#00ffff'  // Cyan
+			];
+			const randomColor = colors[Math.floor(Math.random() * colors.length)];
+			particle.style.background = randomColor;
+			particle.style.boxShadow = `0 0 6px ${randomColor}`;
+			
+			particle.style.left = `${startX}px`;
+			particle.style.top = `${startY}px`;
+			
+			particleContainer.appendChild(particle);
+			
+			// Random direction and distance
+			const angle = (Math.PI * 2 * i) / 15;
+			const distance = 80 + Math.random() * 40;
+			const endX = startX + Math.cos(angle) * distance;
+			const endY = startY + Math.sin(angle) * distance;
+			
+			// GSAP animation
+			gsap.fromTo(particle, 
+				{
+					scale: 0,
+					opacity: 1,
+					rotation: 0
+				},
+				{
+					x: endX - startX,
+					y: endY - startY,
+					scale: 1,
+					opacity: 0,
+					rotation: 360,
+					duration: 0.8,
+					ease: "power2.out",
+					onComplete: () => {
+						particle.remove();
+					}
+				}
+			);
+		}
+	}
+	
+	function startSpinningAnimation() {
+		if (!spinButtonRef || spinningAnimation) return;
+		
+		// Create a timeline for the spinning animation
+		spinningAnimation = gsap.timeline({ repeat: -1 });
+		
+		const spinningText = spinButtonRef.querySelector('.spinning-text');
+		
+		// Gentle pulsing effect on button
+		spinningAnimation
+			.to(spinButtonRef, {
+				scale: 1.02,
+				duration: 1.2,
+				ease: "power2.inOut"
+			})
+			.to(spinButtonRef, {
+				scale: 1,
+				duration: 1.2,
+				ease: "power2.inOut"
+			})
+			// Subtle glow effect
+			.to(spinButtonRef, {
+				boxShadow: "0 6px 16px rgba(108, 117, 125, 0.4), 0 0 12px rgba(108, 117, 125, 0.3)",
+				duration: 1.5,
+				ease: "power2.inOut"
+			}, 0)
+			.to(spinButtonRef, {
+				boxShadow: "0 4px 12px rgba(73, 80, 87, 0.3), 0 0 8px rgba(73, 80, 87, 0.2)",
+				duration: 1.5,
+				ease: "power2.inOut"
+			}, 1.2);
+			
+		// Enhanced metallic shine effect on text
+		if (spinningText) {
+			spinningAnimation.to(spinningText, {
+				backgroundPosition: "300% 0",
+				duration: 2.5,
+				ease: "power2.inOut",
+				repeat: -1,
+				yoyo: true
+			}, 0);
+		}
+	}
+	
+	function stopSpinningAnimation() {
+		if (spinningAnimation) {
+			spinningAnimation.kill();
+			spinningAnimation = null;
+			
+			// Reset button to normal state
+			if (spinButtonRef) {
+				gsap.set(spinButtonRef, {
+					scale: 1,
+					boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)"
+				});
+			}
+		}
 	}
 
 	function handleBetChange(event: Event) {
@@ -78,13 +226,7 @@
 		gameStore.setBet(newBet);
 	}
 
-	function increaseBet() {
-		gameStore.setBet(gameState.bet + 1);
-	}
 
-	function decreaseBet() {
-		gameStore.setBet(gameState.bet - 1);
-	}
 
 	function handleArrayUpdate(data: { reelIndex: number; array: Symbol[]; length: number; originalLength: number }) {
 		const { reelIndex, array } = data;
@@ -124,6 +266,9 @@
 </script>
 
 <div class="slot-machine">
+	<!-- Particle container for effects -->
+	<div class="particle-container" bind:this={particleContainer}></div>
+	
 	<header class="game-header">
 		<h1 class="game-title">SPIN TO WIN</h1>
 		<div class="game-stats">
@@ -174,41 +319,30 @@
 	<div class="controls">
 		<div class="bet-controls">
 			<label for="bet-amount">Bet</label>
-			<div class="bet-input-group">
-				<button 
-					class="bet-btn" 
-					on:click={decreaseBet}
-					disabled={gameState.bet <= GAME_CONFIG.minBet || gameLoopState.isRunning}
-				>
-					−
-				</button>
-				<input
-					id="bet-amount"
-					type="number"
-					min={GAME_CONFIG.minBet}
-					max={GAME_CONFIG.maxBet}
-					value={gameState.bet}
-					on:input={handleBetChange}
-					disabled={gameLoopState.isRunning}
-					class="bet-input"
-				/>
-				<button 
-					class="bet-btn" 
-					on:click={increaseBet}
-					disabled={gameState.bet >= GAME_CONFIG.maxBet || gameLoopState.isRunning}
-				>
-					+
-				</button>
-			</div>
+			<input
+				id="bet-amount"
+				type="number"
+				min={GAME_CONFIG.minBet}
+				max={gameState.balance}
+				value={gameState.bet}
+				on:input={handleBetChange}
+				disabled={gameLoopState.isRunning}
+				class="bet-input-solo"
+			/>
 		</div>
 
 		<div class="action-buttons">
 			<button
 				class="spin-btn"
+				bind:this={spinButtonRef}
 				on:click={handleSpin}
 				disabled={gameLoopState.isRunning || gameState.balance < gameState.bet}
 			>
-				{gameLoopState.isRunning ? 'Spinning...' : 'SPIN'}
+				{#if gameLoopState.isRunning}
+					<span class="spinning-text">Spinning...</span>
+				{:else}
+					SPIN
+				{/if}
 			</button>
 		</div>
 	</div>
@@ -257,4 +391,5 @@
 	</div>
 
 	<RulesWindow />
+	<AboutWindow />
 </div> 

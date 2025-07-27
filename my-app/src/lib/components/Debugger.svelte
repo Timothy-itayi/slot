@@ -90,6 +90,12 @@
 				<h3>How the Reel Works</h3>
 				<p>Each reel has 2000 symbols (100 sets of 20). The numbers show which array indices are currently visible. As the reel spins, these indices change to create the scrolling effect.</p>
 				
+				<div class="array-info">
+					<h4>Array Randomization</h4>
+					<p>Before loading, each reel's 20-symbol set is shuffled. We create 100 of these randomized sets (2000 total symbols) to ensure infinite scrolling without repetition.</p>
+					<p class="tech-note">This prevents predictable patterns while maintaining smooth performance.</p>
+				</div>
+				
 				<div class="spin-info">
 					<h4>Spin Sequence</h4>
 					<p>Reels start spinning with 500ms delays between each. Each reel spins for 8 seconds with cascading stop delays.</p>

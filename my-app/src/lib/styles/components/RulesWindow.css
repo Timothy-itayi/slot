@@ -18,6 +18,9 @@
 	z-index: 1000;
 	transition: all 0.2s;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .rules-toggle:hover {
@@ -87,21 +90,73 @@
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	margin-top: 5px;
+	margin-top: 8px;
 }
 
-.symbol-example {
-	font-size: 1.2rem;
+.reel-example {
 	background: #fff;
-	padding: 4px 8px;
-	border-radius: 4px;
+	padding: 8px;
+	border-radius: 6px;
 	border: 1px solid #ddd;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.horizontal-example {
+	background: #fff;
+	padding: 8px;
+	border-radius: 6px;
+	border: 1px solid #ddd;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.reel-row {
+	display: flex;
+	gap: 8px;
+}
+
+.reel-column {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.symbol-slot {
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.9rem;
+	background: #f8f9fa;
+	border: 1px solid #e9ecef;
+	border-radius: 3px;
+}
+
+.symbol-slot.winning-symbol {
+	background: #d4edda;
+	border-color: #28a745;
+	box-shadow: 0 0 4px rgba(40, 167, 69, 0.3);
 }
 
 .prize {
 	color: #000;
 	font-weight: bold;
 	font-size: 0.85rem;
+}
+
+.example-note {
+	color: #28a745;
+	font-size: 0.75rem;
+	font-weight: 600;
+	margin: 5px 0 0 0;
+}
+
+.example + .example {
+	margin-top: 12px;
+}
+
+.winning-condition .example:last-of-type {
+	margin-bottom: 8px;
 }
 
 .bonus-note {
@@ -165,6 +220,20 @@
 	.rules-toggle {
 		right: 10px;
 		top: 10px;
+	}
+	
+	.symbol-slot {
+		width: 20px;
+		height: 20px;
+		font-size: 0.8rem;
+	}
+	
+	.reel-row {
+		gap: 6px;
+	}
+	
+	.reel-column {
+		gap: 1px;
 	}
 }
 

@@ -63,7 +63,7 @@ This approach eliminated the phantom spin bug, made debugging trivial, and reduc
 
 ## Deployment
 
-🚀 **Live Demo**: [SpinCycle on Vercel](https://spincycle-slot.vercel.app)
+🚀 **Live Demo**: [SpinCycle on Vercel](https://slot-alpha.vercel.app/)
 
 The game is deployed on Vercel for instant access and optimal performance. The deployment includes:
 - Automatic builds on every push to main

@@ -26,37 +26,50 @@
 	align-items: center;
 	justify-content: center;
 	width: 100%;
-	height: 60px; /* Fixed height for exactly 4 levels */
+	height: 60px;
 	font-size: 2rem;
 	border-bottom: 1px solid #eee;
 	background: #fff;
 	position: relative;
-	flex-shrink: 0; /* Prevent shrinking */
+	flex-shrink: 0;
+	transition: background 0.4s ease, box-shadow 0.4s ease;
 }
 
 .symbol:last-child {
 	border-bottom: none;
 }
 
-
-
-/* Highlight winning symbols */
 .winning-symbol {
-	background: linear-gradient(45deg, #ffd700, #ffed4e) !important;
-	box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-	animation: winning-pulse 1s ease-in-out infinite;
-	border: 2px solid #ff6b35;
-	transform: scale(1.05);
+	background: rgba(255, 215, 0, 0.12);
+	box-shadow: inset 0 0 0 1.5px rgba(255, 180, 0, 0.5);
+	animation: win-enter 0.5s ease-out forwards, win-glow 1.6s 0.5s ease-in-out infinite;
+	z-index: 1;
+	position: relative;
 }
 
-@keyframes winning-pulse {
-	0%, 100% { 
-		box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-		transform: scale(1.05);
+@keyframes win-enter {
+	0% {
+		background: rgba(255, 215, 0, 0);
+		box-shadow: inset 0 0 0 0px rgba(255, 180, 0, 0);
 	}
-	50% { 
-		box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
-		transform: scale(1.1);
+	100% {
+		background: rgba(255, 215, 0, 0.12);
+		box-shadow: inset 0 0 0 1.5px rgba(255, 180, 0, 0.5);
+	}
+}
+
+@keyframes win-glow {
+	0%, 100% {
+		background: rgba(255, 215, 0, 0.10);
+		box-shadow:
+			inset 0 0 0 1.5px rgba(255, 180, 0, 0.4),
+			0 0 8px rgba(255, 200, 0, 0.15);
+	}
+	50% {
+		background: rgba(255, 215, 0, 0.22);
+		box-shadow:
+			inset 0 0 0 1.5px rgba(255, 180, 0, 0.65),
+			0 0 18px rgba(255, 200, 0, 0.3);
 	}
 }
 

@@ -23,7 +23,7 @@ describe('Type Definitions', () => {
 			const validSymbol: Symbol = {
 				id: 'seven',
 				name: 'Seven',
-				value: 100,
+				value: 500,
 				color: '#FFD700',
 				emoji: '7️⃣'
 			};
@@ -35,21 +35,27 @@ describe('Type Definitions', () => {
 	describe('PayLine Type', () => {
 		it('should have correct structure', () => {
 			const testPayLine: PayLine = {
-				positions: [0, 1, 2],
+				id: 1,
+				name: 'Top Row',
+				positions: [0, 0, 0],
 				multiplier: 1
 			};
 
-			expect(testPayLine.positions).toEqual([0, 1, 2]);
+			expect(testPayLine.id).toBe(1);
+			expect(testPayLine.name).toBe('Top Row');
+			expect(testPayLine.positions).toEqual([0, 0, 0]);
 			expect(testPayLine.multiplier).toBe(1);
 		});
 
-		it('should allow valid pay line properties', () => {
-			const validPayLine: PayLine = {
-				positions: [0, 4, 8],
-				multiplier: 2
+		it('should allow diagonal pay lines', () => {
+			const diagonalLine: PayLine = {
+				id: 4,
+				name: 'Diagonal ↘',
+				positions: [0, 1, 2],
+				multiplier: 1.5
 			};
 
-			expect(validPayLine).toBeDefined();
+			expect(diagonalLine.multiplier).toBe(1.5);
 		});
 	});
 
@@ -57,7 +63,6 @@ describe('Type Definitions', () => {
 		it('should have correct structure', () => {
 			const testConfig: GameConfig = {
 				reels: 3,
-				symbolsPerReel: 20,
 				visibleSymbols: 4,
 				minBet: 1,
 				maxBet: 100,
@@ -66,7 +71,6 @@ describe('Type Definitions', () => {
 			};
 
 			expect(testConfig.reels).toBe(3);
-			expect(testConfig.symbolsPerReel).toBe(20);
 			expect(testConfig.visibleSymbols).toBe(4);
 			expect(testConfig.minBet).toBe(1);
 			expect(testConfig.maxBet).toBe(100);
@@ -102,67 +106,53 @@ describe('Type Definitions', () => {
 	describe('ReelState Type', () => {
 		it('should have correct structure', () => {
 			const testReelState: ReelState = {
-				symbols: [
-					{ id: 'seven', name: 'Seven', value: 100, color: '#FFD700', emoji: '7️⃣' },
-					{ id: 'bell', name: 'Bell', value: 50, color: '#FFA500', emoji: '🔔' }
+				targetSymbols: [
+					{ id: 'seven', name: 'Seven', value: 500, color: '#FFD700', emoji: '7️⃣' },
+					{ id: 'bell', name: 'Bell', value: 250, color: '#FFA500', emoji: '🔔' }
 				],
-				position: 5,
 				isSpinning: true
 			};
 
-			expect(testReelState.symbols).toHaveLength(2);
-			expect(testReelState.position).toBe(5);
+			expect(testReelState.targetSymbols).toHaveLength(2);
 			expect(testReelState.isSpinning).toBe(true);
 		});
 	});
 
 	describe('WinResult Type', () => {
 		it('should have correct structure', () => {
-			const testPayLine: PayLine = { positions: [0, 1, 2], multiplier: 1 };
+			const testPayLine: PayLine = { id: 1, name: 'Top Row', positions: [0, 0, 0], multiplier: 1 };
 			const testWinResult: WinResult = {
 				payLine: testPayLine,
-				symbol: { id: 'seven', name: 'Seven', value: 100, color: '#FFD700', emoji: '7️⃣' },
+				symbol: { id: 'seven', name: 'Seven', value: 500, color: '#FFD700', emoji: '7️⃣' },
 				multiplier: 1,
-				amount: 300,
-				reelIndex: 0,
+				amount: 500,
 				matchCount: 3,
-				winType: 'horizontal'
+				winType: 'payline'
 			};
 
 			expect(testWinResult.symbol.id).toBe('seven');
 			expect(testWinResult.multiplier).toBe(1);
-			expect(testWinResult.amount).toBe(300);
+			expect(testWinResult.amount).toBe(500);
 			expect(testWinResult.payLine).toBe(testPayLine);
-			expect(testWinResult.reelIndex).toBe(0);
 			expect(testWinResult.matchCount).toBe(3);
-			expect(testWinResult.winType).toBe('horizontal');
+			expect(testWinResult.winType).toBe('payline');
 		});
 	});
 
 	describe('Type Compatibility', () => {
 		it('should allow arrays of types', () => {
 			const symbols: Symbol[] = [
-				{ id: 'seven', name: 'Seven', value: 100, color: '#FFD700', emoji: '7️⃣' },
-				{ id: 'bell', name: 'Bell', value: 50, color: '#FFA500', emoji: '🔔' }
+				{ id: 'seven', name: 'Seven', value: 500, color: '#FFD700', emoji: '7️⃣' },
+				{ id: 'bell', name: 'Bell', value: 250, color: '#FFA500', emoji: '🔔' }
 			];
 
 			const payLines: PayLine[] = [
-				{ positions: [0, 1, 2], multiplier: 1 },
-				{ positions: [3, 4, 5], multiplier: 1 }
+				{ id: 1, name: 'Top Row', positions: [0, 0, 0], multiplier: 1 },
+				{ id: 2, name: 'Center Row', positions: [1, 1, 1], multiplier: 1 }
 			];
 
 			expect(symbols).toHaveLength(2);
 			expect(payLines).toHaveLength(2);
-		});
-
-		it('should allow optional properties', () => {
-			const partialWinResult = {
-				symbol: { id: 'seven', name: 'Seven', value: 100, color: '#FFD700', emoji: '7️⃣' },
-				count: 3,
-				amount: 300
-			};
-
-			expect(partialWinResult).toBeDefined();
 		});
 	});
 
@@ -181,6 +171,8 @@ describe('Type Definitions', () => {
 
 		it('should validate pay line positions are non-negative', () => {
 			const validPayLine: PayLine = {
+				id: 1,
+				name: 'Test Line',
 				positions: [0, 1, 2],
 				multiplier: 1
 			};
@@ -192,6 +184,8 @@ describe('Type Definitions', () => {
 
 		it('should validate multiplier is positive', () => {
 			const validPayLine: PayLine = {
+				id: 1,
+				name: 'Test Line',
 				positions: [0, 1, 2],
 				multiplier: 2
 			};
@@ -199,4 +193,4 @@ describe('Type Definitions', () => {
 			expect(validPayLine.multiplier).toBeGreaterThan(0);
 		});
 	});
-}); 
+});

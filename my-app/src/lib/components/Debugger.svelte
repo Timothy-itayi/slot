@@ -1,141 +1,51 @@
 <script lang="ts">
-	import type { Symbol } from '../types.js';
-	import { GAME_CONFIG } from '../config.js';
+	import { GAME_CONFIG, SYMBOL_WEIGHTS } from '../config.js';
 	import '../styles/components/Debugger.css';
 
-	export let reelArrays: Symbol[][] = [];
-	export let reelIndexes: number[] = [];
 	export let isVisible = false;
 	export let debugInfo: any[] = [];
-	export let onVisibilityChanged: (data: { isVisible: boolean }) => void; // Callback prop
-
-	// Store current positions and indices to prevent reset
-	let currentPositions: number[] = [];
-	let currentIndices: number[][] = [];
+	export let onVisibilityChanged: (data: { isVisible: boolean }) => void;
 
 	function toggleVisibility() {
 		isVisible = !isVisible;
-		onVisibilityChanged({ isVisible }); // Call callback prop directly
-	}
-
-	function getDebugInfo(reelIndex: number) {
-		return debugInfo.find(info => info.reelIndex === reelIndex) || null;
-	}
-
-	// Calculate current array position based on spin state
-	function getCurrentArrayPosition(debug: any, arrayLength: number) {
-		if (!debug || !debug.isSpinning) return 0;
-		// Calculate position based on spin count and array length
-		const originalLength = debug.originalSymbolCount || 5;
-		const spinOffset = (debug.spinCount || 0) * originalLength;
-		return spinOffset % arrayLength;
-	}
-
-	// Get the 4 visible array indices for a reel
-	function getVisibleIndices(currentPosition: number, arrayLength: number) {
-		const indices = [];
-		for (let i = 0; i < GAME_CONFIG.visibleSymbols; i++) {
-			const index = (currentPosition + i) % arrayLength;
-			indices.push(index);
-		}
-		return indices;
-	}
-
-	// Get reel status for display
-	function getReelStatus(debug: any) {
-		if (!debug) return '🔴 Not Ready';
-		if (debug.isSpinning) return '🟢 Spinning';
-		return '🔴 Stopped';
-	}
-
-	// Always calculate and track indices even when hidden
-	$: {
-		// This reactive statement ensures index tracking continues even when overlay is hidden
-		if (reelArrays.length > 0 && debugInfo.length > 0) {
-			// Update current positions and indices for all reels
-			currentPositions = reelArrays.map((array, reelIndex) => {
-				const debug = getDebugInfo(reelIndexes[reelIndex]);
-				return getCurrentArrayPosition(debug, array.length);
-			});
-
-			currentIndices = reelArrays.map((array, reelIndex) => {
-				const debug = getDebugInfo(reelIndexes[reelIndex]);
-				const position = getCurrentArrayPosition(debug, array.length);
-				return getVisibleIndices(position, array.length);
-			});
-		}
-	}
-
-	// Get current position for a specific reel (uses stored value)
-	function getCurrentPositionForReel(reelIndex: number) {
-		return currentPositions[reelIndex] || 0;
-	}
-
-	// Get current indices for a specific reel (uses stored value)
-	function getCurrentIndicesForReel(reelIndex: number) {
-		return currentIndices[reelIndex] || [0, 1, 2, 3];
+		onVisibilityChanged({ isVisible });
 	}
 </script>
 
-<div class="debugger-container">
-	<button class="debug-toggle" on:click={toggleVisibility}>
-		{isVisible ? ' Hide Debug' : ' Show Debug'}
-	</button>
+<button class="debug-toggle" on:click={toggleVisibility}>
+	{isVisible ? 'Hide Debug' : 'Debug'}
+</button>
 
-	{#if isVisible}
-		<!-- Debug Layout -->
-		<div class="debug-layout">
-			<!-- Info Box - Positioned to the right -->
-			<div class="info-box">
-				<h3>How the Reel Works</h3>
-				<p>Each reel has 2000 symbols (100 sets of 20). The numbers show which array indices are currently visible. As the reel spins, these indices change to create the scrolling effect.</p>
-				
-				<div class="array-info">
-					<h4>Array Randomization</h4>
-					<p>Before loading, each reel's 20-symbol set is shuffled. We create 100 of these randomized sets (2000 total symbols) to ensure infinite scrolling without repetition.</p>
-					<p class="tech-note">This prevents predictable patterns while maintaining smooth performance.</p>
-				</div>
-				
-				<div class="spin-info">
-					<h4>Spin Sequence</h4>
-					<p>Reels start spinning with 500ms delays between each. Each reel spins for 8 seconds with cascading stop delays.</p>
-					
-					<div class="reel-status-list">
-						{#each debugInfo as debug, index}
-							<div class="reel-status">
-								<span class="reel-label">Reel {debug.reelIndex + 1}:</span>
-								<span class="status-indicator">{getReelStatus(debug)}</span>
-								<span class="spin-count">Spins: {debug.spinCount || 0}</span>
-							</div>
-						{/each}
-					</div>
-				</div>
-			</div>
+{#if isVisible}
+	<div class="debug-panel">
+		<h4>How the Spinner Works</h4>
 
-			<!-- Reels container - Overlay on slot machine -->
-			<div class="reels-overlay">
-				{#each reelArrays as array, reelIndex}
-					{@const debug = getDebugInfo(reelIndexes[reelIndex])}
-					{@const currentPosition = getCurrentPositionForReel(reelIndex)}
-					{@const visibleIndices = getCurrentIndicesForReel(reelIndex)}
-					<div class="reel-debug">
-						<!-- Array indices for visible positions -->
-						{#each visibleIndices as index, position}
-							<div class="index-display">
-								<div class="index-number">[{index}]</div>
-							</div>
-						{/each}
-						
-						<!-- Current position info -->
-						<div class="reel-info">
-							<div class="info-line">Start: {currentPosition}</div>
-							{#if debug}
-								<div class="info-line">{debug.isSpinning ? '🟢' : '🔴'} {debug.spinCount || 0}</div>
-							{/if}
-						</div>
+		<div class="debug-block">
+			<h5>Outcome-first model</h5>
+			<p>The result of each spin is determined before the animation starts. The reels animate to show a predetermined outcome, not the other way around.</p>
+		</div>
+
+		<div class="debug-block">
+			<h5>Weighted RNG</h5>
+			<p>Symbols appear at different rates. Rare symbols (7️⃣ weight {SYMBOL_WEIGHTS.seven}) show up far less than common ones (🫐 weight {SYMBOL_WEIGHTS.plum}). Tuned for ~95% RTP.</p>
+		</div>
+
+		<div class="debug-block">
+			<h5>Win detection</h5>
+			<p>{GAME_CONFIG.visibleSymbols} row matches (same symbol across all {GAME_CONFIG.reels} reels) plus reel matches (3+ same symbol on one reel). State persists via localStorage.</p>
+		</div>
+
+		<div class="debug-block">
+			<h5>Reels right now</h5>
+			<div class="reel-states">
+				{#each debugInfo as debug}
+					<div class="reel-state-row">
+						<span class="reel-id">R{debug.reelIndex + 1}</span>
+						<span class="reel-status" class:active={debug.isSpinning}>{debug.isSpinning ? 'SPINNING' : 'STOPPED'}</span>
+						<span class="reel-spins">spins: {debug.spinCount || 0}</span>
 					</div>
 				{/each}
 			</div>
 		</div>
-	{/if}
-</div> 
+	</div>
+{/if}

@@ -1,195 +1,135 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
+	import { tick, onDestroy } from 'svelte';
 	import { gsap } from 'gsap';
 	import type { Symbol } from '../types.js';
+	import { SYMBOLS, SYMBOL_WEIGHTS, GAME_CONFIG } from '../config.js';
 	import '../styles/components/Reel.css';
-	
 
-	export let symbols: Symbol[] = [];
+	export let targetSymbols: Symbol[] = [];
 	export let isSpinning = false;
 	export let reelIndex = 0;
-	export let winningSymbols: string[] = [];
-	
-	// Callback props for events
-	export let onArrayUpdate: (data: { reelIndex: number; array: Symbol[]; length: number; originalLength: number }) => void;
+	export let winningRows: number[] = [];
+	export let onSpinComplete: (reelIndex: number) => void;
 	export let onDebugUpdate: (data: any) => void;
-	export let onPositionUpdate: (data: { reelIndex: number; position: number }) => void;
 
-	// Simple array-based reel system
-	let container: HTMLElement;
 	let reelFrame: HTMLElement;
-	let animation: gsap.core.Tween;
-	
-	// Create a large pre-allocated array for infinite scroll
-	// This prevents DOM re-renders during extension
-	let reelArray: Symbol[] = [];
-	let originalSymbolCount = symbols.length;
-	
-	// Track current position for debugging
-	let currentPosition = 0;
+	let animation: gsap.core.Animation;
+	let displaySymbols: Symbol[] = [];
 	let spinCount = 0;
+	let initialized = false;
 
-	// Function to shuffle an array (Fisher-Yates algorithm)
-	function shuffleArray(array: Symbol[]): Symbol[] {
-		const shuffled = [...array];
-		for (let i = shuffled.length - 1; i > 0; i--) {
-			const j = Math.floor(Math.random() * (i + 1));
-			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+	function weightedRandomSymbol(): Symbol {
+		const totalWeight = SYMBOLS.reduce((sum, s) => sum + (SYMBOL_WEIGHTS[s.id] || 1), 0);
+		let r = Math.random() * totalWeight;
+		for (const s of SYMBOLS) {
+			r -= SYMBOL_WEIGHTS[s.id] || 1;
+			if (r <= 0) return s;
 		}
-		return shuffled;
+		return SYMBOLS[SYMBOLS.length - 1];
 	}
 
-	// Function to generate a randomized set of symbols
-	function generateRandomizedSet(): Symbol[] {
-		return shuffleArray(symbols);
+	function generateFillerSymbols(count: number): Symbol[] {
+		return Array.from({ length: count }, () => weightedRandomSymbol());
 	}
 
-	// Initialize with a large array (100 sets of randomized symbols)
-	$: if (symbols.length > 0 && reelArray.length === 0) {
-		// Generate 100 sets of randomized symbols
-		const randomizedSets: Symbol[] = [];
-		for (let i = 0; i < 100; i++) {
-			const randomizedSet = generateRandomizedSet();
-			randomizedSets.push(...randomizedSet);
-		}
-		reelArray = randomizedSets;
-		console.log(`🎰 REEL ${reelIndex + 1}: Initialized with ${reelArray.length} randomized symbols`);
-	}
-
-	// No need for array extension with pre-allocated large array
-	// The array is large enough for many spins without running out
-
-	// Function to get current symbol height based on screen size
 	function getSymbolHeight(): number {
 		const width = window.innerWidth;
-		if (width <= 480) {
-			return 40; // Mobile
-		} else if (width <= 768) {
-			return 50; // Tablet
-		} else {
-			return 60; // Desktop
-		}
+		if (width <= 480) return 40;
+		if (width <= 768) return 50;
+		return 60;
 	}
 
-	// Simple animation function
-	function animateReel() {
-		if (!reelFrame || reelArray.length === 0) return;
-		
-		console.log(`🎰 REEL ${reelIndex + 1}: Starting animation, spin count: ${++spinCount}`);
-		
-		// Kill any existing animation
-		if (animation) {
-			animation.kill();
-		}
-		
-		// Reset position to 0 for consistent starting point
-		gsap.set(reelFrame, { y: 0 });
-		currentPosition = 0;
-		
-		// Get responsive symbol height
+	$: if (targetSymbols.length > 0 && !initialized) {
+		displaySymbols = [...targetSymbols];
+		initialized = true;
+	}
+
+	async function animateReel() {
+		if (!reelFrame || targetSymbols.length === 0) return;
+
+		spinCount++;
+		if (animation) animation.kill();
+
 		const symbolHeight = getSymbolHeight();
-		console.log(`🎰 REEL ${reelIndex + 1}: Using symbol height: ${symbolHeight}px for screen width: ${window.innerWidth}px`);
-		
-		// Calculate animation distance (just slightly more than original symbols)
-		const setsToSpin = 1 + Math.floor(Math.random() * 2); // 1-2 sets
-		const extraSymbols = Math.floor(Math.random() * symbols.length); // 0-19 extra symbols
-		const totalDistance = (symbols.length * setsToSpin + extraSymbols) * symbolHeight;
-		
-		// Slower animation duration for better position tracking
-		const baseDuration = 8; // 8 seconds
-		const randomOffset = (Math.random() - 0.5) * 1; // ±0.5 second variation
-		const duration = baseDuration + randomOffset;
-		
-		// Create simple animation
-		animation = gsap.to(reelFrame, {
-			y: -totalDistance,
-			duration: duration,
-			ease: "power2.out",
-			onUpdate: () => {
-				// Update current position based on animation with responsive height
-				const newY = Number(gsap.getProperty(reelFrame, "y")) || 0;
-				const currentSymbolHeight = getSymbolHeight();
-				currentPosition = Math.floor(Math.abs(newY) / currentSymbolHeight) % reelArray.length;
-			},
-			onComplete: () => {
-				console.log(`🎰 REEL ${reelIndex + 1}: Animation completed`);
-				// Final position update with responsive height
-				const finalY = Number(gsap.getProperty(reelFrame, "y")) || 0;
-				const finalSymbolHeight = getSymbolHeight();
-				currentPosition = Math.floor(Math.abs(finalY) / finalSymbolHeight) % reelArray.length;
-				
-				// Ensure position is within bounds
-				currentPosition = currentPosition % reelArray.length;
-				console.log(`🎰 REEL ${reelIndex + 1}: Final position: ${currentPosition} (symbol height: ${finalSymbolHeight}px)`);
-				
-				// Snap to exact position to ensure even spacing
-				const snapY = -(currentPosition * finalSymbolHeight);
-				gsap.set(reelFrame, { y: snapY });
-			}
+		const fillerCount = 40 + reelIndex * 15 + Math.floor(Math.random() * 10);
+		const filler = generateFillerSymbols(fillerCount);
+
+		const currentlyVisible = displaySymbols.length >= GAME_CONFIG.visibleSymbols
+			? displaySymbols.slice(-GAME_CONFIG.visibleSymbols)
+			: generateFillerSymbols(GAME_CONFIG.visibleSymbols);
+
+		displaySymbols = [...currentlyVisible, ...filler, ...targetSymbols];
+
+		await tick();
+
+		if (!isSpinning) return;
+
+		gsap.set(reelFrame, { y: 0 });
+
+		const scrollDistance = (GAME_CONFIG.visibleSymbols + fillerCount) * symbolHeight;
+		const spinDuration = 2 + reelIndex * 0.8 + (Math.random() * 0.3);
+		const overshootAmount = symbolHeight * 0.4;
+
+		const tl = gsap.timeline({
+			onComplete: () => onSpinComplete(reelIndex)
 		});
+
+		tl.to(reelFrame, {
+			y: symbolHeight * 0.3,
+			duration: 0.12,
+			ease: "power2.in"
+		});
+
+		tl.to(reelFrame, {
+			y: -(scrollDistance + overshootAmount),
+			duration: spinDuration,
+			ease: "power2.out"
+		});
+
+		tl.to(reelFrame, {
+			y: -scrollDistance,
+			duration: 0.2,
+			ease: "power3.out"
+		});
+
+		animation = tl;
 	}
 
-	// Watch for spin trigger
 	$: if (isSpinning) {
 		animateReel();
 	}
 
-	// Don't kill animation when isSpinning becomes false - let it complete naturally
-	// The game store will handle stopping the reels at the right time
-
-	// Call array update callback for debugger
-	$: if (reelArray.length > 0) {
-		onArrayUpdate({
-			reelIndex,
-			array: reelArray,
-			length: reelArray.length,
-			originalLength: originalSymbolCount
-		});
-	}
-
-	// Call debug update callback for debugger
 	$: {
 		onDebugUpdate({
 			reelIndex,
 			isSpinning,
 			spinCount,
-			totalSymbols: reelArray.length,
-			originalSymbolCount,
-			preAllocatedSets: Math.floor(reelArray.length / originalSymbolCount),
-			currentPosition
-		});
-		
-		// Also call position update callback for win detection
-		onPositionUpdate({
-			reelIndex,
-			position: currentPosition
+			totalSymbols: displaySymbols.length
 		});
 	}
 
 	onDestroy(() => {
-		if (animation) {
-			animation.kill();
-		}
+		if (animation) animation.kill();
 	});
 </script>
 
-<div class="reel-container" bind:this={container}>
-	<!-- Movement indicator -->
+<div class="reel-container">
 	{#if isSpinning}
 		<div class="movement-indicator">
 			<div class="indicator-dot"></div>
 		</div>
 	{/if}
-	
+
 	<div class="reel-frame" bind:this={reelFrame}>
-		{#each reelArray as symbol, index}
-			<div 
-				class="symbol" 
-				class:winning-symbol={winningSymbols.includes(symbol.id)}
+		{#each displaySymbols as symbol, index}
+			{@const rowIndex = index - (displaySymbols.length - GAME_CONFIG.visibleSymbols)}
+			<div
+				class="symbol"
+				class:winning-symbol={!isSpinning && rowIndex >= 0 && winningRows.includes(rowIndex)}
 				style="color: {symbol.color}"
 			>
 				{symbol.emoji}
 			</div>
 		{/each}
 	</div>
-</div> 
+</div>

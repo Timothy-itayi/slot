@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { SYMBOLS, PAY_LINES, GAME_CONFIG, INITIAL_BALANCE, SPIN_DURATION, REEL_START_DELAY, REEL_STOP_DELAY, WIN_CHECK_DELAY } from './config.js';
+import { SYMBOLS, SYMBOL_WEIGHTS, PAY_LINES, GAME_CONFIG, INITIAL_BALANCE, REEL_START_DELAY, REEL_MATCH_3X, REEL_MATCH_4X } from './config.js';
 import type { Symbol, PayLine, GameConfig } from './types.js';
 
 describe('Game Configuration', () => {
 	describe('SYMBOLS', () => {
 		it('should have the correct number of symbols', () => {
-			expect(SYMBOLS.length).toBe(6);
+			expect(SYMBOLS.length).toBe(7);
 		});
 
 		it('should have unique symbol IDs', () => {
@@ -33,50 +33,74 @@ describe('Game Configuration', () => {
 		it('should have the seven symbol as highest value', () => {
 			const sevenSymbol = SYMBOLS.find(s => s.id === 'seven');
 			expect(sevenSymbol).toBeDefined();
-			expect(sevenSymbol?.value).toBe(100);
+			expect(sevenSymbol?.value).toBe(625);
+		});
+	});
+
+	describe('SYMBOL_WEIGHTS', () => {
+		it('should have a weight for every symbol', () => {
+			SYMBOLS.forEach(symbol => {
+				expect(SYMBOL_WEIGHTS[symbol.id]).toBeDefined();
+				expect(SYMBOL_WEIGHTS[symbol.id]).toBeGreaterThan(0);
+			});
+		});
+
+		it('should have higher weights for lower-value symbols', () => {
+			expect(SYMBOL_WEIGHTS.plum).toBeGreaterThan(SYMBOL_WEIGHTS.seven);
+			expect(SYMBOL_WEIGHTS.orange).toBeGreaterThan(SYMBOL_WEIGHTS.bell);
 		});
 	});
 
 	describe('PAY_LINES', () => {
-		it('should have the correct number of pay lines', () => {
-			expect(PAY_LINES.length).toBe(5);
+		it('should have one row match per visible row', () => {
+			expect(PAY_LINES.length).toBe(GAME_CONFIG.visibleSymbols);
 		});
 
 		it('should have valid pay line properties', () => {
 			PAY_LINES.forEach(payLine => {
+				expect(payLine.id).toBeDefined();
+				expect(payLine.name).toBeDefined();
 				expect(payLine.positions).toBeDefined();
-				expect(payLine.positions.length).toBe(3);
+				expect(payLine.positions.length).toBe(GAME_CONFIG.reels);
 				expect(payLine.multiplier).toBeGreaterThan(0);
 			});
 		});
 
-		it('should have horizontal pay lines with multiplier 1', () => {
-			const horizontalLines = PAY_LINES.filter(line => line.multiplier === 1);
-			expect(horizontalLines.length).toBe(3);
+		it('should all be straight row matches with multiplier 1', () => {
+			PAY_LINES.forEach(line => {
+				expect(line.multiplier).toBe(1);
+				const row = line.positions[0];
+				expect(line.positions.every(p => p === row)).toBe(true);
+			});
 		});
 
-		it('should have diagonal pay lines with multiplier 2', () => {
-			const diagonalLines = PAY_LINES.filter(line => line.multiplier === 2);
-			expect(diagonalLines.length).toBe(2);
+		it('should cover every visible row exactly once', () => {
+			const coveredRows = PAY_LINES.map(l => l.positions[0]).sort();
+			const expectedRows = Array.from({ length: GAME_CONFIG.visibleSymbols }, (_, i) => i);
+			expect(coveredRows).toEqual(expectedRows);
 		});
 
-		it('should have valid position indices', () => {
+		it('should have positions within visible row bounds', () => {
 			PAY_LINES.forEach(payLine => {
 				payLine.positions.forEach(position => {
 					expect(position).toBeGreaterThanOrEqual(0);
-					expect(position).toBeLessThan(9); // 3x3 grid = 9 positions
+					expect(position).toBeLessThan(GAME_CONFIG.visibleSymbols);
 				});
 			});
+		});
+
+		it('should have unique IDs', () => {
+			const ids = PAY_LINES.map(l => l.id);
+			expect(new Set(ids).size).toBe(PAY_LINES.length);
 		});
 	});
 
 	describe('GAME_CONFIG', () => {
 		it('should have valid game configuration', () => {
 			expect(GAME_CONFIG.reels).toBe(3);
-			expect(GAME_CONFIG.symbolsPerReel).toBe(20);
 			expect(GAME_CONFIG.visibleSymbols).toBe(4);
-			expect(GAME_CONFIG.minBet).toBe(1);
-			expect(GAME_CONFIG.maxBet).toBe(100);
+			expect(GAME_CONFIG.minBet).toBe(20);
+			expect(GAME_CONFIG.maxBet).toBe(500);
 		});
 
 		it('should reference the correct symbols and pay lines', () => {
@@ -90,9 +114,8 @@ describe('Game Configuration', () => {
 			expect(GAME_CONFIG.maxBet).toBeLessThanOrEqual(INITIAL_BALANCE);
 		});
 
-		it('should have valid reel configuration', () => {
+		it('should have valid reel count', () => {
 			expect(GAME_CONFIG.reels).toBeGreaterThan(0);
-			expect(GAME_CONFIG.symbolsPerReel).toBeGreaterThan(GAME_CONFIG.visibleSymbols);
 		});
 	});
 
@@ -102,39 +125,32 @@ describe('Game Configuration', () => {
 			expect(INITIAL_BALANCE).toBeGreaterThanOrEqual(GAME_CONFIG.maxBet);
 		});
 
-		it('should have reasonable timing constants', () => {
-			expect(SPIN_DURATION).toBeGreaterThan(0);
+		it('should have reasonable reel start delay', () => {
 			expect(REEL_START_DELAY).toBeGreaterThan(0);
-			expect(REEL_STOP_DELAY).toBeGreaterThan(0);
-			expect(WIN_CHECK_DELAY).toBeGreaterThan(0);
 		});
 
-		it('should have logical timing relationships', () => {
-			expect(SPIN_DURATION).toBeGreaterThan(REEL_START_DELAY);
-			expect(SPIN_DURATION).toBeGreaterThan(REEL_STOP_DELAY);
-			expect(WIN_CHECK_DELAY).toBeLessThan(REEL_STOP_DELAY);
+		it('should have valid reel match multipliers', () => {
+			expect(REEL_MATCH_3X).toBeGreaterThan(0);
+			expect(REEL_MATCH_3X).toBeLessThan(1);
+			expect(REEL_MATCH_4X).toBeGreaterThan(REEL_MATCH_3X);
+			expect(REEL_MATCH_4X).toBeLessThan(1);
 		});
 	});
 
 	describe('Configuration Consistency', () => {
-		it('should have pay line positions within reel bounds', () => {
-			const maxPosition = GAME_CONFIG.reels * GAME_CONFIG.visibleSymbols - 1;
-			
+		it('should have pay line positions within visible symbol bounds', () => {
 			PAY_LINES.forEach(payLine => {
 				payLine.positions.forEach(position => {
 					expect(position).toBeGreaterThanOrEqual(0);
-					expect(position).toBeLessThanOrEqual(maxPosition);
+					expect(position).toBeLessThan(GAME_CONFIG.visibleSymbols);
 				});
 			});
 		});
 
-		it('should have enough symbols per reel for visible symbols', () => {
-			expect(GAME_CONFIG.symbolsPerReel).toBeGreaterThanOrEqual(GAME_CONFIG.visibleSymbols);
-		});
-
-		it('should have enough total symbols for all reels', () => {
-			const totalSymbolsNeeded = GAME_CONFIG.reels * GAME_CONFIG.symbolsPerReel;
-			expect(SYMBOLS.length).toBeGreaterThan(0); // At least one symbol type
+		it('should have pay line length matching reel count', () => {
+			PAY_LINES.forEach(payLine => {
+				expect(payLine.positions.length).toBe(GAME_CONFIG.reels);
+			});
 		});
 	});
-}); 
+});

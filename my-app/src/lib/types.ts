@@ -4,6 +4,7 @@ export interface Symbol {
 	value: number;
 	color: string;
 	emoji: string;
+	isWild?: boolean;
 }
 
 export interface GameState {
@@ -13,24 +14,24 @@ export interface GameState {
 	winAmount: number;
 	lastWin: number;
 	spinCount: number;
-	lastWins: WinResult[]; // Detailed win information for celebrations
-	totalWinnings: number; // Track cumulative winnings across all spins
+	lastWins: WinResult[];
+	totalWinnings: number;
 }
 
 export interface ReelState {
-	symbols: Symbol[];
-	position: number;
+	targetSymbols: Symbol[];
 	isSpinning: boolean;
 }
 
 export interface PayLine {
-	positions: number[];
+	id: number;
+	name: string;
+	positions: number[]; // row index per reel (length = number of reels)
 	multiplier: number;
 }
 
 export interface GameConfig {
 	reels: number;
-	symbolsPerReel: number;
 	visibleSymbols: number;
 	minBet: number;
 	maxBet: number;
@@ -43,7 +44,7 @@ export interface WinResult {
 	symbol: Symbol;
 	multiplier: number;
 	amount: number;
-	reelIndex?: number; // Optional: for reel-specific wins
-	matchCount?: number; // Optional: number of matching symbols
-	winType?: 'payline' | 'reel' | 'horizontal'; // Type of win for display purposes
-} 
+	matchCount: number;
+	winType: 'payline' | 'reel';
+	reelIndex?: number;
+}

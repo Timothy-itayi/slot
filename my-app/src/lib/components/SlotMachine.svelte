@@ -21,6 +21,7 @@
 
 	let winningRowsByReel: number[][] = Array.from({ length: GAME_CONFIG.reels }, () => []);
 	let completedReels = new Set<number>();
+	let stoppedReels: boolean[] = Array(GAME_CONFIG.reels).fill(false);
 	let showCelebration = false;
 	let celebrationTimeout: ReturnType<typeof setTimeout>;
 
@@ -92,6 +93,7 @@
 
 	function handleSpin() {
 		completedReels = new Set();
+		stoppedReels = Array(GAME_CONFIG.reels).fill(false);
 		if (gameLoopState.isRunning && !gameState.isSpinning) {
 			gameLoop.resetState();
 		}
@@ -99,6 +101,8 @@
 	}
 
 	function handleSpinComplete(reelIndex: number) {
+		stoppedReels[reelIndex] = true;
+		stoppedReels = [...stoppedReels];
 		completedReels.add(reelIndex);
 		if (completedReels.size === GAME_CONFIG.reels) {
 			completedReels = new Set();
@@ -193,7 +197,11 @@
 				disabled={gameLoopState.isRunning || gameState.balance < gameState.bet}
 			>
 				{#if gameLoopState.isRunning}
-					<span class="spinning-text">Spinning...</span>
+					<span class="reel-dots">
+						{#each stoppedReels as stopped, i}
+							<span class="reel-dot" class:stopped>{i + 1}</span>
+						{/each}
+					</span>
 				{:else}
 					SPIN
 				{/if}

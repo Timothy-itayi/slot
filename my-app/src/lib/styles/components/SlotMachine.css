@@ -171,11 +171,32 @@
 	cursor: not-allowed;
 }
 
-.spinning-text {
+.reel-dots {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+.reel-dot {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	background: transparent;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.7rem;
 	font-weight: 700;
-	letter-spacing: 1px;
-	text-transform: uppercase;
-	color: #ccc;
+	color: rgba(255, 255, 255, 0.3);
+	transition: all 0.3s ease;
+}
+
+.reel-dot.stopped {
+	border-color: #fff;
+	background: #fff;
+	color: #1a1a1a;
 }
 
 

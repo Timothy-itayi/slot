@@ -22,10 +22,98 @@
 	let winningRowsByReel: number[][] = Array.from({ length: GAME_CONFIG.reels }, () => []);
 	let completedReels = new Set<number>();
 	let stoppedReels: boolean[] = Array(GAME_CONFIG.reels).fill(false);
+	let showDots = false;
+	let dotsTimeout: ReturnType<typeof setTimeout>;
 	let showCelebration = false;
 	let celebrationTimeout: ReturnType<typeof setTimeout>;
 
 	let resetTimeout: ReturnType<typeof setTimeout>;
+
+	interface ConfettiPiece {
+		id: number;
+		x: number;
+		y: number;
+		rot: number;
+		size: number;
+		color: string;
+		duration: number;
+		delay: number;
+	}
+
+	let confetti: ConfettiPiece[] = [];
+	let confettiId = 0;
+
+	const TIER_COLORS: Record<string, string[]> = {
+		small:   ['#999', '#bbb', '#ddd'],
+		medium:  ['#ffd700', '#ffe766', '#aaa', '#ddd'],
+		big:     ['#ffd700', '#ffe766', '#ff6b35', '#fff', '#333'],
+		jackpot: ['#ffd700', '#ffe766', '#ff6b35', '#ff4444', '#00e5ff', '#fff', '#111'],
+	};
+
+	function getWinTier(total: number, winCount: number): string {
+		if (winCount >= 3 || total >= 500) return 'jackpot';
+		if (total >= 100) return 'big';
+		if (total >= 30) return 'medium';
+		return 'small';
+	}
+
+	function spawnConfetti(total: number, winCount: number) {
+		const tier = getWinTier(total, winCount);
+		const counts: Record<string, number> = { small: 12, medium: 22, big: 36, jackpot: 50 };
+		const count = counts[tier];
+		const colors = TIER_COLORS[tier];
+		const pieces: ConfettiPiece[] = [];
+
+		for (let i = 0; i < count; i++) {
+			const angle = Math.random() * Math.PI * 2;
+			const dist = 40 + Math.random() * 100;
+			pieces.push({
+				id: confettiId++,
+				x: Math.cos(angle) * dist,
+				y: Math.sin(angle) * dist - 30,
+				rot: Math.random() * 720 - 360,
+				size: 4 + Math.random() * 4,
+				color: colors[Math.floor(Math.random() * colors.length)],
+				duration: 0.8 + Math.random() * 0.6,
+				delay: Math.random() * 0.25,
+			});
+		}
+
+		confetti = pieces;
+	}
+
+	function spawnLossConfetti() {
+		const colors = ['#ccc', '#ddd', '#bbb', '#aaa', '#e0e0e0'];
+		const count = 18;
+		const pieces: ConfettiPiece[] = [];
+
+		for (let i = 0; i < count; i++) {
+			const angle = Math.random() * Math.PI * 2;
+			const dist = 30 + Math.random() * 70;
+			pieces.push({
+				id: confettiId++,
+				x: Math.cos(angle) * dist,
+				y: Math.sin(angle) * dist - 20,
+				rot: Math.random() * 720 - 360,
+				size: 3 + Math.random() * 3,
+				color: colors[Math.floor(Math.random() * colors.length)],
+				duration: 0.6 + Math.random() * 0.4,
+				delay: Math.random() * 0.15,
+			});
+		}
+
+		confetti = pieces;
+	}
+
+	function clearConfetti() {
+		confetti = [];
+	}
+
+	function getBalanceColor(balance: number): string {
+		if (balance < 50) return '#ef4444';
+		if (balance < 100) return '#f97316';
+		return '#000';
+	}
 
 	function computeWinningPositions(wins: import('../types.js').WinResult[]): number[][] {
 		const positions: number[][] = Array.from({ length: GAME_CONFIG.reels }, () => []);
@@ -94,6 +182,9 @@
 	function handleSpin() {
 		completedReels = new Set();
 		stoppedReels = Array(GAME_CONFIG.reels).fill(false);
+		showDots = true;
+		clearConfetti();
+		if (dotsTimeout) clearTimeout(dotsTimeout);
 		if (gameLoopState.isRunning && !gameState.isSpinning) {
 			gameLoop.resetState();
 		}
@@ -107,6 +198,19 @@
 		if (completedReels.size === GAME_CONFIG.reels) {
 			completedReels = new Set();
 			gameStore.resolveWins();
+
+			if (gameState.winAmount > 0) {
+				spawnConfetti(gameState.winAmount, gameState.lastWins.length);
+				dotsTimeout = setTimeout(() => {
+					showDots = false;
+				}, 700);
+			} else {
+				spawnLossConfetti();
+				dotsTimeout = setTimeout(() => {
+					showDots = false;
+					clearConfetti();
+				}, 1000);
+			}
 		}
 	}
 
@@ -139,7 +243,7 @@
 		<div class="game-stats">
 			<div class="stat">
 				<span class="label">Balance</span>
-				<span class="value">${gameState.balance}</span>
+				<span class="value" style="color: {getBalanceColor(gameState.balance)}; transition: color 0.3s ease">${gameState.balance}</span>
 			</div>
 			<div class="stat">
 				<span class="label">Last Win</span>
@@ -191,21 +295,43 @@
 		</div>
 
 		<div class="action-buttons">
-			<button
-				class="spin-btn"
-				on:click={handleSpin}
-				disabled={gameLoopState.isRunning || gameState.balance < gameState.bet}
-			>
-				{#if gameLoopState.isRunning}
-					<span class="reel-dots">
-						{#each stoppedReels as stopped, i}
-							<span class="reel-dot" class:stopped>{i + 1}</span>
+			<div class="spin-btn-wrap">
+				<button
+					class="spin-btn"
+					on:click={handleSpin}
+					disabled={gameLoopState.isRunning || showDots || gameState.balance < gameState.bet}
+				>
+					{#if showDots}
+						<span class="reel-dots">
+							{#each stoppedReels as stopped, i}
+								<span class="reel-dot" class:stopped>{i + 1}</span>
+							{/each}
+						</span>
+					{:else}
+						SPIN
+					{/if}
+				</button>
+
+				{#if confetti.length > 0}
+					<div class="confetti-container" aria-hidden="true">
+						{#each confetti as p (p.id)}
+							<span
+								class="confetti-piece"
+								style="
+									--cx: {p.x}px;
+									--cy: {p.y}px;
+									--cr: {p.rot}deg;
+									--cd: {p.duration}s;
+									--cdelay: {p.delay}s;
+									width: {p.size}px;
+									height: {p.size * 1.4}px;
+									background: {p.color};
+								"
+							></span>
 						{/each}
-					</span>
-				{:else}
-					SPIN
+					</div>
 				{/if}
-			</button>
+			</div>
 		</div>
 	</div>
 
@@ -214,6 +340,7 @@
 		isVisible={showCelebration}
 		onClose={() => {
 			showCelebration = false;
+			clearConfetti();
 			gameStore.clearWins();
 		}}
 	/>

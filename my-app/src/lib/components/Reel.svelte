@@ -10,7 +10,6 @@
 	export let reelIndex = 0;
 	export let winningRows: number[] = [];
 	export let onSpinComplete: (reelIndex: number) => void;
-	export let onDebugUpdate: (data: any) => void;
 
 	let reelFrame: HTMLElement;
 	let animation: gsap.core.Animation;
@@ -97,15 +96,6 @@
 
 	$: if (isSpinning) {
 		animateReel();
-	}
-
-	$: {
-		onDebugUpdate({
-			reelIndex,
-			isSpinning,
-			spinCount,
-			totalSymbols: displaySymbols.length
-		});
 	}
 
 	onDestroy(() => {

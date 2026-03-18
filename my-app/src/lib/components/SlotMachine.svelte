@@ -2,8 +2,6 @@
 	import { gameStore } from '../gameStore.js';
 	import { gameLoop } from '../gameLoop.js';
 	import Reel from './Reel.svelte';
-	import Debugger from './Debugger.svelte';
-	import DebugOverlay from './DebugOverlay.svelte';
 	import RulesWindow from './RulesWindow.svelte';
 	import AboutWindow from './AboutWindow.svelte';
 	import PaytableWindow from './PaytableWindow.svelte';
@@ -15,9 +13,6 @@
 	let reels: ReelState[] = [];
 	let gameState: any = {};
 	let gameLoopState: any = {};
-
-	let debuggerVisible = false;
-	let debugInfo: any[] = [];
 
 	let winningRowsByReel: number[][] = Array.from({ length: GAME_CONFIG.reels }, () => []);
 	let completedReels = new Set<number>();
@@ -31,6 +26,7 @@
 
 	interface ConfettiPiece {
 		id: number;
+		ox: number;
 		x: number;
 		y: number;
 		rot: number;
@@ -57,53 +53,34 @@
 		return 'small';
 	}
 
+	function makeParticles(count: number, colors: string[], maxDelay: number, spread: number): ConfettiPiece[] {
+		const pieces: ConfettiPiece[] = [];
+		for (let i = 0; i < count; i++) {
+			const angle = Math.random() * Math.PI * 2;
+			const dist = 35 + Math.random() * 90;
+			pieces.push({
+				id: confettiId++,
+				ox: (Math.random() - 0.5) * spread,
+				x: Math.cos(angle) * dist,
+				y: Math.sin(angle) * dist - 25,
+				rot: Math.random() * 720 - 360,
+				size: 3 + Math.random() * 4,
+				color: colors[Math.floor(Math.random() * colors.length)],
+				duration: 0.6 + Math.random() * 0.5,
+				delay: Math.random() * maxDelay,
+			});
+		}
+		return pieces;
+	}
+
 	function spawnConfetti(total: number, winCount: number) {
 		const tier = getWinTier(total, winCount);
-		const counts: Record<string, number> = { small: 12, medium: 22, big: 36, jackpot: 50 };
-		const count = counts[tier];
-		const colors = TIER_COLORS[tier];
-		const pieces: ConfettiPiece[] = [];
-
-		for (let i = 0; i < count; i++) {
-			const angle = Math.random() * Math.PI * 2;
-			const dist = 40 + Math.random() * 100;
-			pieces.push({
-				id: confettiId++,
-				x: Math.cos(angle) * dist,
-				y: Math.sin(angle) * dist - 30,
-				rot: Math.random() * 720 - 360,
-				size: 4 + Math.random() * 4,
-				color: colors[Math.floor(Math.random() * colors.length)],
-				duration: 0.8 + Math.random() * 0.6,
-				delay: Math.random() * 0.25,
-			});
-		}
-
-		confetti = pieces;
+		const counts: Record<string, number> = { small: 30, medium: 50, big: 70, jackpot: 90 };
+		const delays: Record<string, number> = { small: 1.4, medium: 1.8, big: 2.0, jackpot: 2.2 };
+		confetti = makeParticles(counts[tier], TIER_COLORS[tier], delays[tier], 120);
 	}
 
-	function spawnLossConfetti() {
-		const colors = ['#ccc', '#ddd', '#bbb', '#aaa', '#e0e0e0'];
-		const count = 18;
-		const pieces: ConfettiPiece[] = [];
-
-		for (let i = 0; i < count; i++) {
-			const angle = Math.random() * Math.PI * 2;
-			const dist = 30 + Math.random() * 70;
-			pieces.push({
-				id: confettiId++,
-				x: Math.cos(angle) * dist,
-				y: Math.sin(angle) * dist - 20,
-				rot: Math.random() * 720 - 360,
-				size: 3 + Math.random() * 3,
-				color: colors[Math.floor(Math.random() * colors.length)],
-				duration: 0.6 + Math.random() * 0.4,
-				delay: Math.random() * 0.15,
-			});
-		}
-
-		confetti = pieces;
-	}
+	let showLoseText = false;
 
 	function clearConfetti() {
 		confetti = [];
@@ -183,6 +160,7 @@
 		completedReels = new Set();
 		stoppedReels = Array(GAME_CONFIG.reels).fill(false);
 		showDots = true;
+		showLoseText = false;
 		clearConfetti();
 		if (dotsTimeout) clearTimeout(dotsTimeout);
 		if (gameLoopState.isRunning && !gameState.isSpinning) {
@@ -205,11 +183,13 @@
 					showDots = false;
 				}, 700);
 			} else {
-				spawnLossConfetti();
 				dotsTimeout = setTimeout(() => {
 					showDots = false;
-					clearConfetti();
-				}, 1000);
+					showLoseText = true;
+				}, 700);
+				setTimeout(() => {
+					showLoseText = false;
+				}, 2700);
 			}
 		}
 	}
@@ -220,21 +200,6 @@
 		gameStore.setBet(amount);
 	}
 
-	function handleDebugUpdate(debugData: any) {
-		const existingIndex = debugInfo.findIndex(info => info.reelIndex === debugData.reelIndex);
-
-		if (existingIndex >= 0) {
-			debugInfo[existingIndex] = debugData;
-		} else {
-			debugInfo.push(debugData);
-		}
-
-		debugInfo = [...debugInfo];
-	}
-
-	function handleDebuggerVisibility(data: { isVisible: boolean }) {
-		debuggerVisible = data.isVisible;
-	}
 </script>
 
 <div class="slot-machine">
@@ -268,13 +233,8 @@
 				reelIndex={index}
 				winningRows={winningRowsByReel[index] || []}
 				onSpinComplete={handleSpinComplete}
-				onDebugUpdate={handleDebugUpdate}
 			/>
 		{/each}
-		<DebugOverlay
-			outcome={gameStore.getOutcome()}
-			isVisible={debuggerVisible}
-		/>
 	</div>
 
 	<div class="controls">
@@ -298,8 +258,9 @@
 			<div class="spin-btn-wrap">
 				<button
 					class="spin-btn"
+					class:lose-state={showLoseText}
 					on:click={handleSpin}
-					disabled={gameLoopState.isRunning || showDots || gameState.balance < gameState.bet}
+					disabled={gameLoopState.isRunning || showDots || showLoseText || gameState.balance < gameState.bet}
 				>
 					{#if showDots}
 						<span class="reel-dots">
@@ -307,6 +268,8 @@
 								<span class="reel-dot" class:stopped>{i + 1}</span>
 							{/each}
 						</span>
+					{:else if showLoseText}
+						<span class="lose-text">YOU LOSE</span>
 					{:else}
 						SPIN
 					{/if}
@@ -318,6 +281,7 @@
 							<span
 								class="confetti-piece"
 								style="
+									--ox: {p.ox}px;
 									--cx: {p.x}px;
 									--cy: {p.y}px;
 									--cr: {p.rot}deg;
@@ -349,9 +313,3 @@
 	<PaytableWindow />
 	<AboutWindow />
 </div>
-
-<Debugger
-	debugInfo={debugInfo}
-	isVisible={debuggerVisible}
-	onVisibilityChanged={handleDebuggerVisibility}
-/>

@@ -1,14 +1,14 @@
 <script lang="ts">
-	import TitleScreen from '$lib/components/TitleScreen.svelte';
+	import SlotMachine from '$lib/components/SlotMachine.svelte';
 </script>
 
 <svelte:head>
-	<title>SpinCycle</title>
-	<meta name="description" content="SpinCycle — a slot machine demo built with Svelte" />
+	<title>SpinCycle - Slot Machine</title>
+	<meta name="description" content="SpinCycle slot machine game" />
 </svelte:head>
 
 <main class="app">
-	<TitleScreen />
+	<SlotMachine />
 </main>
 
 <style>

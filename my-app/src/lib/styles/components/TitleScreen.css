@@ -1,0 +1,123 @@
+@font-face {
+	font-family: 'Hoover-Bold';
+	src: url('../../fonts/Hoover-Bold.otf') format('truetype');
+}
+
+.title-screen {
+	max-width: 440px;
+	margin: 0 auto;
+	padding: 40px 30px;
+	background: #fff;
+	border: 2px solid #000;
+	border-radius: 12px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	text-align: center;
+}
+
+.title-name {
+	font-family: 'Hoover-Bold', sans-serif;
+	font-size: 2.6rem;
+	color: #000;
+	margin: 0 0 6px 0;
+	letter-spacing: 2px;
+	line-height: 1.1;
+}
+
+.title-sub {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: #666;
+	text-transform: uppercase;
+	letter-spacing: 3px;
+	margin: 0 0 32px 0;
+}
+
+.instructions {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-bottom: 36px;
+	text-align: left;
+}
+
+.instruction-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 14px;
+	background: #f8f8f8;
+	border-radius: 8px;
+	border: 1px solid #e8e8e8;
+}
+
+.instruction-num {
+	font-weight: 800;
+	font-size: 0.75rem;
+	color: #fff;
+	background: #000;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	margin-top: 1px;
+}
+
+.instruction-text {
+	font-size: 0.85rem;
+	color: #333;
+	line-height: 1.45;
+}
+
+.instruction-text strong {
+	color: #000;
+}
+
+.start-btn {
+	display: block;
+	width: 100%;
+	padding: 16px;
+	font-size: 1.15rem;
+	font-weight: 700;
+	font-family: 'Hoover-Bold', sans-serif;
+	background: #1a1a1a;
+	color: #fff;
+	border: none;
+	border-radius: 12px;
+	cursor: pointer;
+	text-transform: uppercase;
+	letter-spacing: 2px;
+	transition: background 0.2s ease, transform 0.1s ease;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.start-btn:hover {
+	background: #333;
+	transform: translateY(-1px);
+}
+
+.start-btn:active {
+	background: #000;
+	transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+	.title-screen {
+		padding: 28px 18px;
+	}
+
+	.title-name {
+		font-size: 2rem;
+	}
+
+	.title-sub {
+		font-size: 0.8rem;
+		margin-bottom: 24px;
+	}
+
+	.instruction-item {
+		padding: 8px 10px;
+	}
+}
